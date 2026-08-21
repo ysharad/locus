@@ -28,7 +28,9 @@ import kotlinx.coroutines.launch
 class MeshForegroundService : Service() {
 
     companion object {
-        private const val CHANNEL_ID = "bitchat_mesh_service"
+        // Fresh id (v2) so the lowered MIN importance actually applies — Android locks a channel's
+        // importance after first creation, so the old LOW channel would otherwise stick.
+        private const val CHANNEL_ID = "locus_mesh_bg_v2"
         private const val NOTIFICATION_ID = 10001
 
         const val ACTION_START = "com.bitchat.android.service.START"
@@ -310,7 +312,7 @@ class MeshForegroundService : Service() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(pendingIntent)
             // Add an action button that appears when notification is expanded
@@ -327,10 +329,11 @@ class MeshForegroundService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.mesh_service_channel_name),
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_MIN
             ).apply {
                 description = getString(R.string.mesh_service_channel_desc)
                 setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
             }
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .createNotificationChannel(channel)

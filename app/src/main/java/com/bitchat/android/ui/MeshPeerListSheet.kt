@@ -61,7 +61,11 @@ import com.bitchat.android.favorites.FavoriteRelationship
 import com.bitchat.android.favorites.FavoritesPersistenceService
 import com.bitchat.android.geohash.ChannelID
 import com.bitchat.android.identity.SecureIdentityStateManager
+import com.bitchat.android.model.BitchatMessage
 import com.bitchat.android.model.BitchatMessageType
+import com.bitchat.android.connect.ConnectManager
+import com.bitchat.android.connect.ui.ChatConnectivityBanner
+import com.bitchat.android.connect.ui.LocusMessageActions
 import com.bitchat.android.ui.theme.BASE_FONT_SIZE
 import com.bitchat.android.ui.theme.BitchatMotion
 import com.bitchat.android.ui.theme.LocalBitchatPalette
@@ -1666,6 +1670,16 @@ private fun convertRSSIToSignalStrength(rssi: Int?): Int {
     }
 }
 
+/** A short, safe one-line snippet of a message, for reply previews and quote lead-ins. */
+private fun replySnippet(message: BitchatMessage): String {
+    val c = message.content.trim()
+    return when {
+        message.type == BitchatMessageType.File -> "attachment"
+        c.startsWith("/") -> "attachment"
+        else -> c.replace("\n", " ").take(80)
+    }
+}
+
 /**
  * Nested Private Chat Sheet - iOS-style nested bottom sheet
  */
@@ -1816,9 +1830,21 @@ fun PrivateChatSheet(
 
                     HorizontalDivider(thickness = 1.dp, color = colorScheme.outlineVariant)
 
+                    // Honest connectivity state: nudge to turn on Bluetooth / sign in when the chat
+                    // can't actually go through (or won't survive going out of range).
+                    ChatConnectivityBanner()
+
                     // Messages list
                     var forceScrollToBottom by remember { mutableStateOf(false) }
                     var isScrolledUp by remember { mutableStateOf(false) }
+
+                    // Locus rich-chat state. The freshest live mesh peerID is the delivery target for
+                    // reactions/typing; the stored conversation id can be stale after peerID rotation.
+                    val chatPeer = activeMeshPeerID ?: peerID
+                    var selectedMsg by remember { mutableStateOf<BitchatMessage?>(null) }
+                    var replyingTo by remember(peerID) { mutableStateOf<BitchatMessage?>(null) }
+                    val typingFrom by ConnectManager.typingFrom.collectAsStateWithLifecycle()
+                    val theyreTyping = chatPeer in typingFrom || peerID in typingFrom
 
                     MessagesList(
                         messages = messages,
@@ -1829,10 +1855,49 @@ fun PrivateChatSheet(
                         forceScrollToBottom = forceScrollToBottom,
                         onScrolledUpChanged = { isUp -> isScrolledUp = isUp },
                         onNicknameClick = { /* handle mention */ },
-                        onMessageLongPress = { /* handle long press */ },
+                        onMessageLongPress = { msg -> selectedMsg = msg },
                         onCancelTransfer = { msg -> viewModel.cancelMediaSend(msg.id) },
                         onImageClick = { _, _, _ -> /* handle image click */ }
                     )
+
+                    // "…typing" line, cleared automatically when pings stop arriving.
+                    if (theyreTyping) {
+                        Text(
+                            "$displayName is typing…",
+                            fontSize = 12.sp,
+                            color = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    // Reply preview: what this next message answers, with a way to back out.
+                    replyingTo?.let { r ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(Modifier.width(3.dp).height(30.dp).background(com.bitchat.android.connect.ui.Copper))
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Replying to", fontSize = 11.sp, color = com.bitchat.android.connect.ui.Copper)
+                                Text(
+                                    replySnippet(r),
+                                    fontSize = 13.sp,
+                                    color = colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                            Text(
+                                "✕",
+                                fontSize = 16.sp,
+                                color = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.clip(CircleShape).clickable { replyingTo = null }.padding(6.dp)
+                            )
+                        }
+                    }
 
                     // Input section. No divider here: ChatInputSection draws its own fade and
                     // hairline.
@@ -1849,17 +1914,24 @@ fun PrivateChatSheet(
                         onMessageTextChange = { newText ->
                             messageText = newText
                             viewModel.setConversationDraft(peerID, newText.text)
+                            if (newText.text.isNotBlank()) ConnectManager.notifyTyping(chatPeer)
                             // Do not update the shared suggestion state here: this sheet
                             // renders its own popups as hidden, so an update only leaves
                             // a stale popup behind for the main composer.
                         },
                         onSend = {
-                            if (messageText.text.trim().isNotEmpty()) {
-                                viewModel.sendMessage(messageText.text.trim()) { accepted ->
+                            val body = messageText.text.trim()
+                            if (body.isNotEmpty()) {
+                                // A reply rides as a lead-in quote line, so it survives every
+                                // transport (mesh or relay) as ordinary text and reads as a quote.
+                                val quoted = replyingTo
+                                val toSend = if (quoted != null) "↳ ${replySnippet(quoted)}\n$body" else body
+                                viewModel.sendMessage(toSend) { accepted ->
                                     if (accepted) {
                                         messageText =
                                             androidx.compose.ui.text.input.TextFieldValue("")
                                         viewModel.setConversationDraft(peerID, "")
+                                        replyingTo = null
                                         forceScrollToBottom = !forceScrollToBottom
                                     }
                                 }
@@ -1887,6 +1959,22 @@ fun PrivateChatSheet(
                         colorScheme = colorScheme,
                         showMediaButtons = true
                     )
+
+                    // Long-press actions (react / reply / copy / report) for the selected message.
+                    selectedMsg?.let { msg ->
+                        LocusMessageActions(
+                            message = msg,
+                            chatPeer = chatPeer,
+                            isMine = msg.sender == nickname,
+                            onReply = { replyingTo = msg },
+                            onReport = {
+                                ConnectManager.blockAndReport(chatPeer, report = true)
+                                selectedMsg = null
+                                onDismiss()
+                            },
+                            onDismiss = { selectedMsg = null }
+                        )
+                    }
                 }
 
                 // Header. Built from the same tokens as the main chat header rather than a

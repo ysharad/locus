@@ -39,27 +39,27 @@ val Typography = Typography(
         lineHeight = (BASE_FONT_SIZE + 1).sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = BitchatFontFamily,
-        fontWeight = FontWeight.Medium,
+        fontFamily = LocusDisplayFamily,
+        fontWeight = FontWeight.SemiBold,
         fontSize = (BASE_FONT_SIZE + 3).sp,
         lineHeight = (BASE_FONT_SIZE + 9).sp
     ),
     // Previously unset, which leaked the Roboto default into onboarding + sheet titles.
     headlineLarge = TextStyle(
-        fontFamily = BitchatFontFamily,
+        fontFamily = LocusDisplayFamily,
         fontWeight = FontWeight.Bold,
         fontSize = (BASE_FONT_SIZE + 13).sp,
         lineHeight = (BASE_FONT_SIZE + 21).sp
     ),
     titleLarge = TextStyle(
-        fontFamily = BitchatFontFamily,
-        fontWeight = FontWeight.Medium,
+        fontFamily = LocusDisplayFamily,
+        fontWeight = FontWeight.SemiBold,
         fontSize = (BASE_FONT_SIZE + 5).sp,
         lineHeight = (BASE_FONT_SIZE + 13).sp
     ),
     titleMedium = TextStyle(
-        fontFamily = BitchatFontFamily,
-        fontWeight = FontWeight.Medium,
+        fontFamily = LocusDisplayFamily,
+        fontWeight = FontWeight.SemiBold,
         fontSize = (BASE_FONT_SIZE + 1).sp,
         lineHeight = (BASE_FONT_SIZE + 7).sp
     ),

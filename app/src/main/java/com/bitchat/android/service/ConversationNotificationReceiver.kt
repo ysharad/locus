@@ -40,13 +40,23 @@ class ConversationNotificationReceiver : BroadcastReceiver() {
                             ?.trim()
                             ?.takeIf(String::isNotEmpty)
                             ?: return@launch
-                        // A notification can outlive the process/service that posted it. Promote
-                        // the mesh runtime before dispatch so Android keeps the transport alive
-                        // after this short-lived receiver finishes.
+                        // A notification can outlive the process/service that posted it. Keep the
+                        // transport alive past this short-lived receiver.
                         MeshForegroundService.start(context.applicationContext)
-                        val mesh = MeshServiceHolder.getUnifiedOrCreate(
-                            context.applicationContext
-                        )
+                        // CRITICAL: if the app/mesh is already alive and connected, send through the
+                        // EXISTING instance untouched. Re-acquiring via getUnifiedOrCreate() here
+                        // refreshes delegates (and can replace the instance) — which re-points, or
+                        // nulls, the live mesh's delegate and tears down the active BLE connection
+                        // the UI is using. That was the bug: a peer "dropping" the instant you reply
+                        // from the notification shade, even while in range. Only promote/create when
+                        // there is genuinely no reusable mesh (the process was killed).
+                        val liveBt = MeshServiceHolder.meshService
+                        val liveUnified = MeshServiceHolder.unifiedMeshService
+                        val mesh = if (liveUnified != null && liveBt?.isReusable() == true) {
+                            liveUnified
+                        } else {
+                            MeshServiceHolder.getUnifiedOrCreate(context.applicationContext)
+                        }
                         val message = BitchatMessage(
                             id = UUID.randomUUID().toString().uppercase(),
                             sender = mesh.myPeerID,

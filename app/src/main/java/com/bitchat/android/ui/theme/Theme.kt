@@ -19,50 +19,55 @@ import androidx.compose.ui.platform.LocalView
 
 // Standard UI semantics live in Material so stock components and custom Bitchat composables
 // share one source of truth. LocalBitchatPalette below only supplies app-specific extra colors.
+//
+// "Locus field" palette — a receiver drawn as an instrument. Near-black charcoal-green ground,
+// a single fired-copper action colour, and jade reserved for live-signal semantics only
+// (dots, bars, presence). No magenta / violet / saturated blue anywhere: the loudest thing
+// in the system is brass instrumentation, not LED. See DESIGN_BRIEF.md / the Locus design doc.
 internal val DarkBitchatColorScheme = darkColorScheme(
-    primary = Color(0xFF32D74B),
-    onPrimary = Color.Black,
-    primaryContainer = Color(0xFF163D1D),
-    onPrimaryContainer = Color(0xFFB8F5C1),
-    secondary = Color(0xFF0A84FF),
-    onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF082E54),
-    onSecondaryContainer = Color(0xFFC2E0FF),
-    tertiary = DarkBitchatPalette.accentOrange,
-    onTertiary = Color.Black,
-    background = Color(0xFF000000),
-    onBackground = Color(0xFFF5F5F5),
-    surface = Color(0xFF0E150E),
-    onSurface = Color(0xFFF5F5F5),
-    surfaceVariant = Color(0xFF182118),
-    onSurfaceVariant = Color(0xFF9AA69A),
-    outline = Color(0xFF2A3A2A),
-    outlineVariant = Color(0xFF1C271C),
-    error = Color(0xFFFF453A),
-    onError = Color.Black
+    primary = Color(0xFFCF7A45),           // locusCopper — primary, connect, celebration
+    onPrimary = Color(0xFF180E07),          // ON-COPPER
+    primaryContainer = Color(0xFF1E1710),   // copper-tint fill (selected chips, tray)
+    onPrimaryContainer = Color(0xFFCF7A45),
+    secondary = Color(0xFF63C39D),          // locusJade — live signal, in range, safe
+    onSecondary = Color(0xFF06170F),        // ON-JADE
+    secondaryContainer = Color(0xFF14231C),
+    onSecondaryContainer = Color(0xFF63C39D),
+    tertiary = Color(0xFFCF7A45),           // match moment is copper, not a third hue
+    onTertiary = Color(0xFF180E07),
+    background = Color(0xFF0C1210),          // locusInk
+    onBackground = Color(0xFFEDE7DA),        // locusBone — text primary
+    surface = Color(0xFF131C18),             // locusSurface — sheets, fields
+    onSurface = Color(0xFFEDE7DA),
+    surfaceVariant = Color(0xFF1A241F),      // locusCard — elevated card
+    onSurfaceVariant = Color(0xFF9AA79F),    // locusSage — text secondary
+    outline = Color(0xFF2B3A33),             // locusOutline
+    outlineVariant = Color(0xFF45564D),      // locusOutlineStrong — focus, icon strokes
+    error = Color(0xFFDB5B4A),               // locusRust — block, report, destructive
+    onError = Color(0xFF1A0603)
 )
 
 internal val LightBitchatColorScheme = lightColorScheme(
-    primary = Color(0xFF248A3D),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD5F1D8),
-    onPrimaryContainer = Color(0xFF0A3212),
-    secondary = Color(0xFF007AFF),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD6E9FF),
-    onSecondaryContainer = Color(0xFF002C5C),
-    tertiary = LightBitchatPalette.accentOrange,
-    onTertiary = Color.Black,
-    background = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF131A13),
-    surface = Color(0xFFF2F6F2),
-    onSurface = Color(0xFF131A13),
-    surfaceVariant = Color(0xFFE7EDE7),
-    onSurfaceVariant = Color(0xFF4C574C),
-    outline = Color(0xFFCBD6CB),
-    outlineVariant = Color(0xFFDEE6DE),
-    error = Color(0xFFD70015),
-    onError = Color.White
+    primary = Color(0xFF9C4E23),            // locusCopper (daylight) — clears 4.5:1 on paper
+    onPrimary = Color(0xFFFFF6EE),          // ON-COPPER
+    primaryContainer = Color(0xFFF6E9DF),   // warm copper-tint fill
+    onPrimaryContainer = Color(0xFF9C4E23),
+    secondary = Color(0xFF146B4F),          // locusJade (daylight)
+    onSecondary = Color(0xFFF2FBF6),        // ON-JADE
+    secondaryContainer = Color(0xFFE1EFE8),
+    onSecondaryContainer = Color(0xFF146B4F),
+    tertiary = Color(0xFF9C4E23),
+    onTertiary = Color(0xFFFFF6EE),
+    background = Color(0xFFEFECE2),          // locusPaper
+    onBackground = Color(0xFF131C18),        // locusInk — text primary
+    surface = Color(0xFFF7F5EE),             // locusSurface (daylight)
+    onSurface = Color(0xFF131C18),
+    surfaceVariant = Color(0xFFFFFFFF),      // locusCard (daylight)
+    onSurfaceVariant = Color(0xFF4E5A53),    // locusSage (daylight)
+    outline = Color(0xFFD5D1C2),             // locusOutline (daylight)
+    outlineVariant = Color(0xFFA8A392),      // locusOutlineStrong (daylight)
+    error = Color(0xFFA83420),               // locusRust (daylight)
+    onError = Color(0xFFFFF6EE)
 )
 
 @Composable

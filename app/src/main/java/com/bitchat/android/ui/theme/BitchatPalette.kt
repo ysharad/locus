@@ -49,14 +49,16 @@ data class BitchatPalette(
 )
 
 val DarkBitchatPalette = BitchatPalette(
-    inputOutline = Color(0xFF333635),
-    inputOutlineFocused = Color(0xFF5A605D),
-    inputSurface = Color(0xFF0B0B0B),
-    inputSurfaceFocused = Color(0xFF151515),
-    inputButton = Color(0xFF1E1E1E),
-    textTertiary = Color(0xFF6B776B),
-    accentOrange = Color(0xFFFF9F0A),
-    accentPurple = Color(0xFFBF5AF2),
+    inputOutline = Color(0xFF352B48),
+    inputOutlineFocused = Color(0xFF5C4E7A),
+    inputSurface = Color(0xFF110B1A),
+    inputSurfaceFocused = Color(0xFF1A1226),
+    inputButton = Color(0xFF241A36),
+    textTertiary = Color(0xFF8A958C),
+    // Copper — the app's one accent (self bubbles, mentions, unread). Was amber; the Locus
+    // system has no amber, so this lines the chat up with the rest of the app.
+    accentOrange = Color(0xFFCF7A45),
+    accentPurple = Color(0xFF9D8BFF),
     peerColors = PeerColorStyle.Dark,
 )
 
@@ -66,9 +68,9 @@ val LightBitchatPalette = BitchatPalette(
     inputSurface = Color(0xFFFAFAFA),
     inputSurfaceFocused = Color(0xFFF2F2F2),
     inputButton = Color(0xFFE8E8E8),
-    textTertiary = Color(0xFF757F75),
-    accentOrange = Color(0xFFFF9500),
-    accentPurple = Color(0xFFAF52DE),
+    textTertiary = Color(0xFF6B756E),
+    accentOrange = Color(0xFF9C4E23),
+    accentPurple = Color(0xFF6C5CE0),
     peerColors = PeerColorStyle.Light,
 )
 

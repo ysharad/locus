@@ -307,6 +307,12 @@ class LocationChannelManager private constructor(private val context: Context) {
         source: LocationSelectionSource?,
         teleported: Boolean
     ) {
+        // Hard cap: any channel wider than Neighborhood (from a message hashtag tap, a
+        // notification deep-link, a stale bookmark, etc.) is refused and falls back to Mesh.
+        if (channel is ChannelID.Location && !channel.channel.level.allowedForPublicChat) {
+            selectInternal(ChannelID.Mesh, source = null, teleported = false)
+            return
+        }
         selectedLocationSource = source
         _teleported.value = when (channel) {
             ChannelID.Mesh -> false
@@ -441,7 +447,8 @@ class LocationChannelManager private constructor(private val context: Context) {
     private fun computeChannels(location: Location, token: Long) {
         if (!canUseLiveLocation(token)) return
 
-        val levels = GeohashChannelLevel.allCases()
+        // Only ever surface the two most-local radii — never City/Province/Region.
+        val levels = GeohashChannelLevel.publicChatCases()
         val result = mutableListOf<GeohashChannel>()
 
         for (level in levels) {
@@ -586,11 +593,14 @@ class LocationChannelManager private constructor(private val context: Context) {
                 val persisted = gson.fromJson(channelData, PersistedChannel::class.java)
                 val channel = persisted?.toChannel()
                 val source = persisted?.selectionSource()
-                val canRestore = channel !is ChannelID.Location ||
+                // Never restore a wider-than-Neighborhood channel that was persisted before the cap.
+                val withinPublicCap = channel !is ChannelID.Location ||
+                    channel.channel.level.allowedForPublicChat
+                val canRestore = withinPublicCap && (channel !is ChannelID.Location ||
                     source == LocationSelectionSource.MANUAL ||
                     (LiveLocationPrivacyGate.isEnabled &&
                         _systemLocationEnabled.value &&
-                        _permissionState.value == PermissionState.AUTHORIZED)
+                        _permissionState.value == PermissionState.AUTHORIZED))
 
                 if (channel != null && canRestore) {
                     _selectedChannel.value = channel

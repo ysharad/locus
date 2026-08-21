@@ -246,7 +246,8 @@ class MeshDelegateHandler(
         val focusedConversationID = currentPrivateChatPeer?.let { ContactDirectory.canonicalConversationId(it) }
         val shouldSendReadReceipt = !isAppInBackground &&
             senderConversationID != null &&
-            focusedConversationID == senderConversationID
+            focusedConversationID == senderConversationID &&
+            com.bitchat.android.connect.ConnectManager.readReceiptsEnabled()
 
         if (shouldSendReadReceipt) {
             android.util.Log.d(

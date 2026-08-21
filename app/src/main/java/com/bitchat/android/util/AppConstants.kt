@@ -24,8 +24,12 @@ object AppConstants {
         const val BROADCAST_CLEANUP_DELAY_MS: Long = 500L
 
         object Gatt {
-            val SERVICE_UUID: UUID = UUID.fromString("F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C")
-            val CHARACTERISTIC_UUID: UUID = UUID.fromString("A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D")
+            // Locus's own mesh identity — distinct from bitchat's UUIDs so the two
+            // apps form separate networks. Locus devices only discover each other;
+            // bitchat traffic (and our BCX1 broadcasts) never cross between the apps.
+            val SERVICE_UUID: UUID = UUID.fromString("E7DE54D6-E03B-41C8-81F2-F572EC2C8A03")
+            val CHARACTERISTIC_UUID: UUID = UUID.fromString("177B8FAC-8139-4E0E-9A6B-CF80014742F5")
+            // Standard Client Characteristic Configuration Descriptor — unchanged (BLE spec).
             val DESCRIPTOR_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         }
     }

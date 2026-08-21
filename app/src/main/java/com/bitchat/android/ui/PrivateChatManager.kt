@@ -175,6 +175,12 @@ class PrivateChatManager(
             return false
         }
         onSendMessage(content, conversationID, recipientNickname ?: "", message.id)
+        // Also push through the opt-in encrypted online relay (no-op unless the user opted in).
+        try {
+            com.bitchat.android.connect.ConnectManager.relayOutgoing(
+                conversationID, content, message.id, senderNickname
+            )
+        } catch (_: Exception) { }
         return true
     }
 

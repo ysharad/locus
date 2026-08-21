@@ -300,33 +300,35 @@ internal object PowerProfileResolver {
             else -> PowerManager.BatteryBand.NORMAL
         }
 
+        // Locus is a discovery-first app: when it's in the foreground and the battery is fine, we
+        // run the radio flat-out (continuous scan) so people are found in seconds, not tens of
+        // seconds. Battery still governs the low/critical bands, and background stays duty-cycled
+        // (below) — just far less brutally than the stock profile.
         val mode = when {
             isBackground && batteryBand == PowerManager.BatteryBand.CRITICAL ->
                 PowerManager.PowerMode.ULTRA_LOW_POWER
+            isBackground && isCharging -> PowerManager.PowerMode.PERFORMANCE
             isBackground -> PowerManager.PowerMode.POWER_SAVER
-            isCharging -> PowerManager.PowerMode.PERFORMANCE
             batteryBand == PowerManager.BatteryBand.CRITICAL ->
                 PowerManager.PowerMode.ULTRA_LOW_POWER
-            batteryBand == PowerManager.BatteryBand.LOW ->
+            batteryBand == PowerManager.BatteryBand.LOW && !isCharging ->
                 PowerManager.PowerMode.POWER_SAVER
-            else -> PowerManager.PowerMode.BALANCED
+            else -> PowerManager.PowerMode.PERFORMANCE // foreground, normal/charging → find fast
         }
 
         val ble = when {
+            // Low/critical battery in background: conserve hard (the stock brutal duty cycle).
+            isBackground && batteryBand != PowerManager.BatteryBand.NORMAL ->
+                PowerManager.BleSchedule(1_000L, 59_000L, false)
+            // Background, healthy battery, already holding a link: keep it warm + still look around.
             isBackground && hasDirectPeers ->
-                PowerManager.BleSchedule(
-                    scanOnMs = 1_000L,
-                    scanOffMs = 29_000L,
-                    continuousScan = false
-                )
+                PowerManager.BleSchedule(3_000L, 6_000L, false) // ~33% duty (was ~3%)
+            // Background, healthy battery, looking for people: scan hard so a pocketed phone still
+            // finds the room. The foreground service legitimises sustained background scanning.
             isBackground ->
-                PowerManager.BleSchedule(
-                    scanOnMs = 1_000L,
-                    scanOffMs = 59_000L,
-                    continuousScan = false
-                )
+                PowerManager.BleSchedule(4_000L, 4_000L, false) // 50% duty (was ~1.7%)
             mode == PowerManager.PowerMode.PERFORMANCE ->
-                PowerManager.BleSchedule(Long.MAX_VALUE, 0L, true)
+                PowerManager.BleSchedule(Long.MAX_VALUE, 0L, true) // continuous
             mode == PowerManager.PowerMode.BALANCED ->
                 PowerManager.BleSchedule(8_000L, 2_000L, false)
             mode == PowerManager.PowerMode.POWER_SAVER ->
@@ -336,12 +338,12 @@ internal object PowerProfileResolver {
         }
 
         val announcementInterval = when {
-            isBackground && batteryBand == PowerManager.BatteryBand.NORMAL -> 60_000L
-            isBackground && batteryBand == PowerManager.BatteryBand.LOW -> 120_000L
+            isBackground && batteryBand == PowerManager.BatteryBand.NORMAL -> 20_000L // was 60s
+            isBackground && batteryBand == PowerManager.BatteryBand.LOW -> 90_000L
             isBackground -> 300_000L
-            mode == PowerManager.PowerMode.POWER_SAVER -> 60_000L
+            mode == PowerManager.PowerMode.POWER_SAVER -> 45_000L
             mode == PowerManager.PowerMode.ULTRA_LOW_POWER -> 120_000L
-            else -> 30_000L
+            else -> 12_000L // foreground: re-announce often so a new arrival is seen within seconds
         }
 
         val wifi = when {

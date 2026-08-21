@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // A profile doc is keyed by the device's mesh identity fingerprint.
+    // First authenticated writer stamps their uid and owns the doc from then on.
+    match /profiles/{fingerprint} {
+      // Signed-in reads only (anonymous auth counts). Discovery is mesh-only; the sender needs a
+      // profile read to fetch a recipient's chatPubKey. The push token is NOT here (see /tokens).
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() <= 32;
+      allow update: if request.auth != null
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+    }
+
+    // Opt-in online chat: an end-to-end ENCRYPTED store-and-forward mailbox. The server only
+    // ever holds ciphertext (encrypted to the recipient's public key). A message is dropped into
+    // the recipient's mailbox by any signed-in sender; only the recipient — the account that owns
+    // that fingerprint's profile doc — can read or delete it. There is no plaintext, ever.
+    match /mailbox/{recipientFp}/messages/{msgId} {
+      // A sender may only post AS a fingerprint whose profile they own — this binds `from` to the
+      // authenticated identity, so a message can't be forged into a victim's thread as someone else.
+      allow create: if request.auth != null
+                    && request.resource.data.from is string
+                    && request.resource.data.ct is string          // base64 ciphertext
+                    && request.resource.data.ts is number
+                    && request.resource.data.ct.size() <= 8192      // ~cap a single message
+                    && exists(/databases/$(database)/documents/profiles/$(request.resource.data.from))
+                    && get(/databases/$(database)/documents/profiles/$(request.resource.data.from)).data.uid == request.auth.uid;
+      allow read, delete: if request.auth != null
+                    && exists(/databases/$(database)/documents/profiles/$(recipientFp))
+                    && get(/databases/$(database)/documents/profiles/$(recipientFp)).data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Push tokens: owner-only, never client-readable. Written by the fingerprint's owner; read only
+    // by the Cloud Function via the admin SDK (which bypasses rules) to send a content-less wake.
+    match /tokens/{fingerprint} {
+      allow read: if false;
+      allow create, update: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && exists(/databases/$(database)/documents/profiles/$(fingerprint))
+                    && get(/databases/$(database)/documents/profiles/$(fingerprint)).data.uid == request.auth.uid;
+      allow delete: if request.auth != null
+                    && exists(/databases/$(database)/documents/profiles/$(fingerprint))
+                    && get(/databases/$(database)/documents/profiles/$(fingerprint)).data.uid == request.auth.uid;
+    }
+
+    // Venue room codes: a short shareable code -> channel. Readable by anyone signed in so a code
+    // can be resolved to its room; created once by its first owner.
+    match /rooms/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Abuse reports: write-only drop box. Only backend admins (server SDK) read these.
+    match /reports/{reportId} {
+      allow create: if request.auth != null
+                    && request.resource.data.reporterUid == request.auth.uid
+                    && request.resource.data.reportedPeerID is string;
+      allow read, update, delete: if false;
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

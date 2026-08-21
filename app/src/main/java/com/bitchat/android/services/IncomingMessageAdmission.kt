@@ -12,6 +12,17 @@ import kotlinx.coroutines.runBlocking
  */
 internal object IncomingMessageAdmission {
     fun admitToAppState(message: BitchatMessage): Boolean = try {
+        // Locus control traffic (profile cards, connect signals) is consumed by
+        // ConnectManager and must never surface in timelines, unread counts, or notifications.
+        if (com.bitchat.android.connect.ConnectManager.handleIncoming(message)) {
+            return false
+        }
+        // Blocked means silent everywhere — private, room, and channel traffic alike. Without this
+        // gate a blocked person's ordinary DMs still rang the notification bell (the Connect-layer
+        // swallow above only covers BCX1 signals).
+        if (com.bitchat.android.connect.ConnectManager.isBlockedSender(message.senderPeerID)) {
+            return false
+        }
         when {
             message.isPrivate -> {
                 val peerID = message.senderPeerID?.takeIf(String::isNotBlank)

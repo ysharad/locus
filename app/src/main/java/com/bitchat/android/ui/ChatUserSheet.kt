@@ -1,11 +1,17 @@
 package com.bitchat.android.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.bitchat.android.connect.ConnectManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,7 +76,43 @@ fun ChatUserSheet(
                     fontFamily = BitchatFontFamily,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
-                
+
+                // Reaction bar — a quick tap-to-react on the selected message. Only shown inside a
+                // 1:1 chat (there's a private peer to send it to); reactions travel over the mesh.
+                val reactPeer = viewModel.privateChatSheetPeer.value ?: viewModel.selectedPrivateChatPeer.value
+                if (selectedMessage != null && selectedMessage.isPrivate && reactPeer != null) {
+                    val myKey = ConnectManager.myFingerprint()
+                    val mine = ConnectManager.reactions.value[selectedMessage.id]?.get(myKey)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        listOf("❤️", "🔥", "😂", "👍", "⚡").forEach { emoji ->
+                            val active = mine == emoji
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        if (active) colorScheme.primary.copy(alpha = 0.18f) else colorScheme.surfaceVariant,
+                                        CircleShape
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (active) colorScheme.primary.copy(alpha = 0.6f) else Color.Transparent,
+                                        CircleShape
+                                    )
+                                    .clickable {
+                                        ConnectManager.sendReaction(reactPeer, selectedMessage.id, emoji)
+                                        onDismiss()
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(emoji, fontSize = 20.sp)
+                            }
+                        }
+                    }
+                }
+
                 // Action list (iOS-style plain list)
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth()

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- locusInk — the ground of the whole system, and the splash background. -->
+    <color name="locus_ink">#0C1210</color>
+</resources>

@@ -66,7 +66,8 @@ class WifiAwareMeshService(private val context: Context) : MeshService, Transpor
     companion object {
         private const val TAG = "WifiAwareMeshService"
         private const val MAX_TTL: UByte = 7u
-        private const val SERVICE_NAME = "bitchat"
+        // Locus's own Wi-Fi Aware service name — isolates this transport from bitchat too.
+        private const val SERVICE_NAME = "bitconnect"
         private const val PSK = "bitchat_secret"
         // Network request / socket timeouts
         private const val NETWORK_REQUEST_TIMEOUT_MS = 30_000

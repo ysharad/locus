@@ -1,156 +1,64 @@
-# bitchat Privacy Policy
+# Locus Privacy Policy
 
-*Last updated: January 2025*
+_Last updated: August 15, 2026_
 
-## Our Commitment
+Locus helps you discover, connect, and chat with people around you — primarily over a local Bluetooth mesh network, with an optional online layer. This policy explains exactly what data exists, where it goes, and who can see it.
 
-bitchat is designed with privacy as its foundation. We believe private communication is a fundamental human right. This policy explains how bitchat protects your privacy.
+## Your identity
 
-## Summary
+Locus has no accounts, logins, emails, or phone numbers. Your identity is a cryptographic key pair generated on your device on first launch. Your public identity is a fingerprint of that key. Uninstalling the app destroys the key; there is no way for us (or anyone) to recover it.
 
-**WE DO NOT COLLECT ANY INFORMATION.**
+## Your card
 
-- **No personal data collection** - We don't collect names, emails, or phone numbers
-- **No location data collection** - Location is accessed only for local processing (BLE/Geohash) and is never collected or sent to us
-- **Hybrid Functionality** - bitchat offers two modes of communication:
-  - **Bluetooth Mesh Chat**: This mode is completely offline, using peer-to-peer Bluetooth connections. It does not use any servers or internet connection.
-  - **Geohash Chat**: This mode uses an internet connection to communicate with others in a specific geographic area. It relies on Nostr relays for message transport.
-- **No tracking** - We have no analytics, telemetry, or user tracking
-- **Open source** - You can verify these claims by reading our code
+Your card — the name, age (optional), emoji, one-liner, vibes, and intent you choose — is written by you and is **public by design**:
 
-## What Information bitchat Stores
+- **Over Bluetooth**, your card is broadcast unencrypted to Locus users in radio range (and relayed a few hops further by their devices). Anyone nearby running compatible software can see it. Only put on your card what you'd say out loud in the room.
+- **Online**, if your device has internet access, your card and a last-seen timestamp are also uploaded to our backend (Google Firebase, see below). This happens automatically; the app is fully functional without it.
 
-### On Your Device Only
+## Connect signals and chats
 
-1. **Identity Key** 
-   - A cryptographic key generated on first launch
-   - Stored locally in your device's secure storage
-   - Allows you to maintain "favorite" relationships across app restarts
-   - Never leaves your device
+- "Connect" (like) signals are sent **end-to-end encrypted** (Noise protocol) directly to the person you choose. We never see them; no server ever sees them. Who liked whom exists only on the two devices involved.
+- Matches are computed locally on your device and stored only there.
+- Private chats are end-to-end encrypted device-to-device over the mesh. We cannot read them.
+- Public "Room" messages are visible to everyone in mesh range, like speaking in a shared space.
 
-2. **Nickname**
-   - The display name you choose (or auto-generated)
-   - Stored only on your device
-   - Shared with peers you communicate with
+## What our backend stores (Google Firebase)
 
-3. **Message History** (if enabled)
-   - When room owners enable retention, messages are saved locally
-   - Stored encrypted on your device
-   - You can delete this at any time
+When internet is available, we store:
 
-4. **Favorite Peers**
-   - Public keys of peers you mark as favorites
-   - Stored only on your device
-   - Allows you to recognize these peers in future sessions
+- Your public card (name, optional age, emoji, one-liner, vibes, intent)
+- A last-seen timestamp
+- An anonymous authentication ID that proves ownership of your card
+- Reports you file about other users (see Safety)
 
-### Temporary Session Data
+We store **no** location, contacts, phone number, email, message content, likes, or matches. Firebase (Google LLC) processes this data on our behalf; see Google's privacy documentation for their infrastructure practices.
 
-During each session, bitchat temporarily maintains:
-- Active peer connections (forgotten when app closes)
-- Routing information for message delivery
-- Cached messages for offline peers (12 hours max)
+## Location and Bluetooth permissions
 
-## What Information is Shared
+Android requires location permission for Bluetooth scanning. Locus uses it only to operate the local radio. **Your location is never recorded, stored, or transmitted** — not to us, not to other users. Proximity is implicit (radio range), never coordinates.
 
-### With Other bitchat Users
+## Safety
 
-When you use bitchat, nearby peers can see:
-- Your chosen nickname
-- Your ephemeral public key (changes each session)
-- Messages you send to public rooms or directly to them
-- Your approximate Bluetooth signal strength (for connection quality)
+You can block and report any person from their card or your connections list. Blocking is immediate and local. Reports (the reported card and fingerprint) are sent to us for review when internet is available.
 
-### With Room Members
+## Data deletion
 
-When you join a password-protected room:
-- Your messages are visible to others with the password
-- Your nickname appears in the member list
-- Room owners can see you've joined
+- Local data (your key, card, matches, chats): delete by uninstalling the app or using in-app data wipe.
+- Backend data: to have your backend card and any related data deleted, contact us at the address below with your fingerprint. We will delete it within 30 days of a verified request.
 
-## What We DON'T Do
+## Children
 
-bitchat **never**:
-- Collects personal information
-- Collects location history
-- Transmits any data to us (the developers)
-- Stores data on servers
-- Shares data with third parties
-- Uses analytics or telemetry
-- Creates user profiles
-- Requires registration
+Locus is for adults. You must be 18 or older to use it.
 
-## Encryption
+## Changes
 
-All private messages use end-to-end encryption:
-- **X25519** for key exchange
-- **AES-256-GCM** for message encryption
-- **Ed25519** for digital signatures
-- **Argon2id** for password-protected rooms
-
-## Your Rights
-
-You have complete control:
-- **Delete Everything**: Triple-tap the logo to instantly wipe all data
-- **Leave Anytime**: Close the app and your presence disappears
-- **No Account**: Nothing to delete from servers because there are none
-- **Portability**: Your data never leaves your device unless you export it
-
-## Location Data & Permissions
-
-To provide the core functionality of bitchat, we access your device's location data. This access is necessary for the following specific purposes:
-
-### 1. Bluetooth Low Energy (BLE) Scanning
-- **Why we need it:** The Android operating system requires Location permission to scan for nearby Bluetooth LE devices (especially on Android 11 and lower). This is a system-level requirement because Bluetooth scans can theoretically be used to derive location.
-- **How we use it:** We use this permission strictly to discover other bitchat peers nearby for the "Bluetooth Mesh Chat" mode.
-- **Privacy protection:** We do not record or store your location during this process. The data is processed instantaneously by the Android system to facilitate the connection.
-
-### 2. Geohash Chat Functionality
-- **Why we need it:** The "Geohash Chat" mode allows you to communicate with others in your approximate geographic area.
-- **How we use it:** If you enable this mode, we access your location to calculate a "geohash" (a short alphanumeric string representing a geographic region). This geohash is used to find and subscribe to relevant channels on decentralized Nostr relays.
-- **Privacy protection:** 
-  - Your precise GPS coordinates are **never** sent to any server or peer.
-  - Only the coarse geohash (representing an area, not a pinpoint) is shared with the Nostr network.
-  - You can use the "Bluetooth Mesh Chat" mode without this feature if you prefer.
-
-**We do not collect, store, or share your location history.** Location data is processed locally on your device to enable these specific features.
-
-## Children's Privacy
-
-bitchat does not knowingly collect information from children. The app has no age verification because it collects no personal information from anyone.
-
-## Data Retention
-
-- **Messages**: Deleted from memory when app closes (unless room retention is enabled)
-- **Identity Key**: Persists until you delete the app
-- **Favorites**: Persist until you remove them or delete the app
-- **Everything Else**: Exists only during active sessions
-
-## Security Measures
-
-- All communication is encrypted
-- No data transmitted to servers (there are none)
-- Open source code for public audit
-- Regular security updates
-- Cryptographic signatures prevent tampering
-
-## Changes to This Policy
-
-If we update this policy:
-- The "Last updated" date will change
-- The updated policy will be included in the app
-- No retroactive changes can affect data (since we don't collect any)
+We will update this policy when the app's data practices change and note the date above.
 
 ## Contact
 
-bitchat is an open source project. For privacy questions:
-- Review our code: https://github.com/yourusername/bitchat
-- Open an issue on GitHub
-- Join the discussion in public rooms
-
-## Philosophy
-
-Privacy isn't just a feature—it's the entire point. bitchat proves that modern communication doesn't require surrendering your privacy. No accounts, no servers, no surveillance. Just people talking freely.
+<!-- TODO: replace with your real support address before the store listing goes live -->
+Contact: hello@locus.app
 
 ---
 
-*This policy is released into the public domain under The Unlicense, just like bitchat itself.*
+Locus is built on the open-source bitchat mesh engine (GPL-3.0). Source code for this app is available as required by its license.

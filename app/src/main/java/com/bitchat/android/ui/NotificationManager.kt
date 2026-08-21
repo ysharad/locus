@@ -180,6 +180,12 @@ class NotificationManager(
      * Show a notification for a private message with proper grouping and state awareness
      */
     fun showPrivateMessageNotification(senderPeerID: String, senderNickname: String, messageContent: String) {
+        // Honor the Locus notification settings (master switch, quiet hours, "New message") on the
+        // live-mesh path too, not just the FCM-relay path.
+        if (!com.bitchat.android.connect.ConnectManager.messageNotificationsAllowed()) {
+            Log.d(TAG, "Skipping message notification - suppressed by Locus notification settings")
+            return
+        }
         val conversationID = ContactDirectory.canonicalConversationId(senderPeerID)
         if (conversationPreferences.isMuted(conversationID)) {
             Log.d(TAG, "Skipping muted conversation notification")
@@ -511,6 +517,15 @@ class NotificationManager(
         isFirstMessage: Boolean = false,
         locationName: String? = null
     ) {
+        val locusAllowed = if (isMention) {
+            com.bitchat.android.connect.ConnectManager.mentionNotificationsAllowed()
+        } else {
+            com.bitchat.android.connect.ConnectManager.roomActivityAllowed()
+        }
+        if (!locusAllowed) {
+            Log.d(TAG, "Skipping geohash notification - suppressed by Locus notification settings")
+            return
+        }
         // Only show notifications if app is in background OR user is not viewing this specific geohash
         val shouldNotify = isAppInBackground || (!isAppInBackground && currentGeohash != geohash)
 
@@ -732,6 +747,10 @@ class NotificationManager(
         messageContent: String,
         senderPeerID: String? = null
     ) {
+        if (!com.bitchat.android.connect.ConnectManager.mentionNotificationsAllowed()) {
+            Log.d(TAG, "Skipping mesh mention notification - suppressed by Locus notification settings")
+            return
+        }
         // Only show notifications if app is in background OR user is not viewing mesh chat
         // User is viewing mesh chat when: not in private chat AND not in geohash chat
         val isViewingMeshChat = currentPrivateChatPeer == null && currentGeohash == null

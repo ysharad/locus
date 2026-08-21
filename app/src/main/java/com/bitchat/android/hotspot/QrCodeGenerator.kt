@@ -69,7 +69,7 @@ object QrCodeGenerator {
      * @param sizePx Size of the QR code in pixels
      * @return Bitmap of the QR code, or null on error
      */
-    private fun generateQrBitmap(data: String, sizePx: Int): Bitmap? {
+    fun generateQrBitmap(data: String, sizePx: Int): Bitmap? {
         if (data.isBlank() || sizePx <= 0) {
             Log.w(TAG, "Invalid data or size: data.length=${data.length}, sizePx=$sizePx")
             return null

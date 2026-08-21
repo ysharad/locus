@@ -2,13 +2,16 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme -->
     <style name="Theme.BitchatAndroid" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Plain ink window; the animated mark is drawn by the Compose LocusSplash on top. -->
+        <item name="android:windowBackground">@color/locus_ink</item>
         <!-- Enable edge-to-edge content -->
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+        <!-- Light glyphs over the ink splash; BitchatTheme re-syncs these to the live theme once Compose draws. -->
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
         <!-- Ensure smooth transitions -->
         <item name="android:windowActivityTransitions">true</item>
         <item name="android:windowContentTransitions">true</item>

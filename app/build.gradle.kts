@@ -1,9 +1,11 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
 }
 
 val githubReleaseCertSha256 = providers
@@ -27,11 +29,11 @@ android {
     buildToolsVersion = libs.versions.buildTools.get()
 
     defaultConfig {
-        applicationId = "com.bitchat.droid"
+        applicationId = "com.goapps.locus"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 38
-        versionName = "2.0.1"
+        versionCode = 26
+        versionName = "0.21.1"
         buildConfigField(
             "String",
             "GITHUB_RELEASE_CERT_SHA256",
@@ -51,6 +53,21 @@ android {
         includeInBundle = false
     }
 
+    // Release signing from an untracked keystore.properties (repo root); absent on CI,
+    // where release artifacts stay unsigned and are signed externally.
+    val keystoreProps = rootProject.file("keystore.properties")
+    if (keystoreProps.exists()) {
+        val props = Properties().apply { keystoreProps.inputStream().use { load(it) } }
+        signingConfigs {
+            create("release") {
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             ndk {
@@ -59,6 +76,9 @@ android {
             }
         }
         release {
+            if (keystoreProps.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -159,6 +179,9 @@ dependencies {
     
     // JSON
     implementation(libs.gson)
+    implementation(libs.play.services.ads)
+    implementation(libs.user.messaging.platform)
+    implementation(libs.prebid.mobile.sdk)
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -183,6 +206,14 @@ dependencies {
 
     // Google Play Services Location
     implementation(libs.gms.location)
+
+    // Firebase (phase 2 backend): anonymous auth bound to the mesh fingerprint + profile sync
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.functions)
+    implementation(libs.firebase.messaging)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     // Security preferences
     implementation(libs.androidx.security.crypto)

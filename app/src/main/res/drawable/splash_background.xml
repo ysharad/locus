@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The field, on ink. Shown before Compose draws, so the first frame is already Locus. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/locus_ink" />
+    <item
+        android:width="150dp"
+        android:height="150dp"
+        android:drawable="@drawable/ic_launcher_foreground"
+        android:gravity="center" />
+</layer-list>

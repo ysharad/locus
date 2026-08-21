@@ -1,6 +1,8 @@
 [versions]
 # Android and Kotlin
 agp = "9.3.1"
+googleServices = "4.5.0"
+firebaseBom = "34.17.0"
 kotlin = "2.4.10"
 compileSdk = "37"
 minSdk = "26" # API 26 for proper BLE support
@@ -33,6 +35,9 @@ tink-android = "1.23.0"
 
 # JSON
 gson = "2.14.0"
+play-services-ads = "24.4.0"
+ump = "3.2.0"
+prebid = "3.3.3"
 
 # Coroutines
 kotlinx-coroutines = "1.11.0"
@@ -76,6 +81,12 @@ mockito-core = "5.23.0"
 roboelectric = "4.15" # 4.16+ drops the AndroidKeyStore shim; breaks EncryptionServiceTest
 
 [libraries]
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
+
 # AndroidX Core
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle-runtime" }
@@ -112,9 +123,13 @@ google-tink-android = { module = "com.google.crypto.tink:tink-android", version.
 
 # JSON
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "play-services-ads" }
+user-messaging-platform = { module = "com.google.android.ump:user-messaging-platform", version.ref = "ump" }
+prebid-mobile-sdk = { module = "org.prebid:prebid-mobile-sdk", version.ref = "prebid" }
 
 # Coroutines
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinx-coroutines" }
 
 # Bluetooth
 nordic-ble = { module = "no.nordicsemi.android:ble", version.ref = "nordic-ble" }
@@ -162,6 +177,7 @@ roboelectric = { module = "org.robolectric:robolectric", version.ref = "roboelec
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 
 [plugins]
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-parcelize = { id = "kotlin-parcelize" }

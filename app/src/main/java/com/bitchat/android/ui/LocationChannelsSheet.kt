@@ -181,7 +181,8 @@ fun LocationChannelsSheet(
     val standardBlue = colorScheme.secondary
 
     val nearbyChannels = remember(availableChannels) {
-        availableChannels.filter { it.level != GeohashChannelLevel.BUILDING }
+        // Only the two most-local radii are offered; wider public channels are disabled.
+        availableChannels.filter { it.level.allowedForPublicChat }
     }
     val selectedChannelOutsideNearby = remember(selectedChannel, nearbyChannels) {
         selectedLocationChannelOutsideNearby(selectedChannel, nearbyChannels)
@@ -486,37 +487,9 @@ fun LocationChannelsSheet(
                                         }
                                     }
 
-                                    CustomGeohashRow(
-                                        customGeohash = customGeohash,
-                                        onGeohashChange = { value ->
-                                            val allowed = "0123456789bcdefghjkmnpqrstuvwxyz".toSet()
-                                            customGeohash = value
-                                                .lowercase()
-                                                .replace("#", "")
-                                                .filter { it in allowed }
-                                                .take(12)
-                                            customError = null
-                                        },
-                                        onFocusGained = {
-                                            coroutineScope.launch { sheetState.expand() }
-                                        },
-                                        onOpenMap = {
-                                            val normalized = customGeohash.trim().lowercase().replace("#", "")
-                                            val initial = when {
-                                                normalized.isNotBlank() -> normalized
-                                                selectedChannel is ChannelID.Location ->
-                                                    (selectedChannel as ChannelID.Location).channel.geohash
-                                                else -> ""
-                                            }
-                                            val intent = Intent(context, GeohashPickerActivity::class.java).apply {
-                                                putExtra(GeohashPickerActivity.EXTRA_INITIAL_GEOHASH, initial)
-                                            }
-                                            mapPickerLauncher.launch(intent)
-                                        },
-                                        onTeleport = {
-                                            teleportToGeohash(customGeohash)
-                                        }
-                                    )
+                                    // Free-text geohash + TELEPORT + map picker are intentionally
+                                    // removed: public chat is capped at the local Block/Neighborhood
+                                    // radius, so arbitrary/wide-area teleporting is not offered.
                                 }
                             }
 

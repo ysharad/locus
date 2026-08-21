@@ -173,6 +173,14 @@ class ChatViewModel(
       NotificationManagerCompat.from(application.applicationContext)
     )
 
+    init {
+        // Relayed messages ring through the same notifier as mesh ones — same settings,
+        // mute, and focused-chat suppression (it receives the canonical conversation id).
+        com.bitchat.android.connect.ChatRelay.notifier = { conversationID, senderNickname, preview ->
+            notificationManager.showPrivateMessageNotification(conversationID, senderNickname, preview)
+        }
+    }
+
     private val verificationHandler = VerificationHandler(
         context = application.applicationContext,
         scope = viewModelScope,

@@ -12,8 +12,20 @@ enum class GeohashChannelLevel(val precision: Int, val displayName: String) {
     PROVINCE(4, "Province"),
     REGION(2, "REGION");
     
+    /**
+     * Public (Nostr) geohash chat in Locus is deliberately capped at the two most-local
+     * radii — Block (~0.15 km) and Neighborhood (~1.2 km). Wider levels (City/Province/Region)
+     * would drop users into a huge public channel of strangers, which is off-brand for a
+     * hyperlocal app and a moderation liability. This is the single source of truth for the cap.
+     */
+    val allowedForPublicChat: Boolean
+        get() = this == BLOCK || this == NEIGHBORHOOD
+
     companion object {
         fun allCases(): List<GeohashChannelLevel> = values().toList()
+
+        /** Only the levels users may actually join for public chat. See [allowedForPublicChat]. */
+        fun publicChatCases(): List<GeohashChannelLevel> = listOf(BLOCK, NEIGHBORHOOD)
     }
 }
 

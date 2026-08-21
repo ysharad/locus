@@ -154,16 +154,26 @@ class MainActivity : OrientationAwareActivity() {
             onOnboardingFailed = ::handleOnboardingFailed
         )
         
+        com.bitchat.android.ui.AdsBootstrap.init(this)
         setContent {
             BitchatTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = MaterialTheme.colorScheme.background
                 ) { innerPadding ->
-                    OnboardingFlowScreen(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                    )
+                    var showSplash by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+                    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+                        // No app-wide ad slot: a pinned banner needs a network round-trip, so in the
+                        // no-data venues Locus is built for it renders a permanent dead band and
+                        // contradicts the no-tracking promise. Removed per the Locus design system §10.
+                        OnboardingFlowScreen(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                        )
+                        if (showSplash) {
+                            com.bitchat.android.connect.ui.LocusSplash(onDone = { showSplash = false })
+                        }
+                    }
                 }
             }
         }
@@ -330,7 +340,7 @@ class MainActivity : OrientationAwareActivity() {
 
                 // Add the callback - this will be automatically removed when the activity is destroyed
                 onBackPressedDispatcher.addCallback(this, backCallback)
-                ChatScreen(viewModel = chatViewModel)
+                com.bitchat.android.connect.ui.ConnectRoot(viewModel = chatViewModel)
             }
             
             OnboardingState.ERROR -> {
@@ -850,7 +860,7 @@ class MainActivity : OrientationAwareActivity() {
 
     private fun handleVerificationIntent(intent: Intent) {
         val uri = intent.data ?: return
-        if (uri.scheme != "bitchat" || uri.host != "verify") return
+        if (uri.scheme != "bitconnect" || uri.host != "verify") return
 
         chatViewModel.showVerificationSheet()
         val qr = VerificationService.verifyScannedQR(uri.toString())

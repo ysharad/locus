@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -74,6 +75,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
+import com.bitchat.android.connect.ConnectManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -410,12 +412,55 @@ fun MessageItem(
     val colorScheme = MaterialTheme.colorScheme
     val timeFormatter = remember { SimpleDateFormat(CHAT_TIMESTAMP_PATTERN, Locale.getDefault()) }
 
+    val isSelf = message.sender == currentUserNickname
+    // A Locus reply carries a "↳ quoted\nbody" lead-in. Lift the quote out into a distinct block
+    // above the bubble and let the bubble show only the reply body — much cleaner than the raw
+    // arrow line sitting inside the bubble.
+    val replyQuote: String?
+    val displayMessage: BitchatMessage
+    run {
+        val raw = message.content
+        if (message.isPrivate && raw.startsWith("↳ ") && raw.contains('\n')) {
+            val nl = raw.indexOf('\n')
+            replyQuote = raw.substring(2, nl).trim()
+            displayMessage = message.copy(content = raw.substring(nl + 1))
+        } else {
+            replyQuote = null
+            displayMessage = message
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(top = topSpacing),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
+        if (replyQuote != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
+                horizontalArrangement = if (bubbles && isSelf) Arrangement.End else Arrangement.Start
+            ) {
+                Row(
+                    modifier = Modifier
+                        .background(colorScheme.surfaceVariant.copy(alpha = 0.45f), RoundedCornerShape(9.dp))
+                        .padding(start = 8.dp, end = 11.dp, top = 5.dp, bottom = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.width(2.dp).height(15.dp).background(com.bitchat.android.connect.ui.Copper))
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        replyQuote,
+                        fontSize = 12.sp,
+                        color = colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontFamily = BitchatFontFamily,
+                        modifier = Modifier.widthIn(max = 220.dp)
+                    )
+                }
+            }
+        }
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -425,9 +470,10 @@ fun MessageItem(
                 // Provide a small end padding for own private messages so overlay doesn't cover text.
                 // Bubble mode draws the status beneath the bubble instead, so no inset is needed.
                 val endPad = if (!bubbles && message.isPrivate && message.sender == currentUserNickname) 16.dp else 0.dp
-                // Create a custom layout that combines selectable text with clickable nickname areas
+                // Create a custom layout that combines selectable text with clickable nickname areas.
+                // displayMessage strips a reply's "↳ …" lead-in (rendered as a quote block above).
                 MessageTextWithClickableNicknames(
-                    message = message,
+                    message = displayMessage,
                     messages = messages,
                     currentUserNickname = currentUserNickname,
                     meshService = meshService,
@@ -478,7 +524,83 @@ fun MessageItem(
             }
         }
 
+        // Reactions (private chats only): additive, display-only under the message. Reading a shared
+        // StateFlow here can never affect the mesh transport — worst case the chips just don't show.
+        if (message.isPrivate) {
+            val allReactions by ConnectManager.reactions.collectAsState()
+            val forMsg = allReactions[message.id]
+            if (!forMsg.isNullOrEmpty()) {
+                val isSelf = message.sender == currentUserNickname
+                ReactionRow(
+                    reactions = forMsg,
+                    myKey = ConnectManager.myFingerprint(),
+                    alignEnd = bubbles && isSelf
+                )
+            }
+        }
+
         // Link previews removed; links are now highlighted inline and clickable within the message text
+    }
+}
+
+/**
+ * A compact row of reaction chips beneath a message. Identical emoji collapse into one chip with a
+ * count; a chip the local person contributed to is tinted with the accent so their own reactions
+ * read back to them. Display-only — reactions are placed from the message action sheet.
+ */
+@Composable
+private fun ReactionRow(
+    reactions: Map<String, String>,
+    myKey: String?,
+    alignEnd: Boolean
+) {
+    // Group by emoji, preserving first-seen order; track whether I'm among each emoji's reactors.
+    val grouped = remember(reactions, myKey) {
+        val order = LinkedHashMap<String, Int>()
+        val mineSet = HashSet<String>()
+        reactions.forEach { (reactor, emoji) ->
+            if (emoji.isBlank()) return@forEach
+            order[emoji] = (order[emoji] ?: 0) + 1
+            if (reactor == myKey) mineSet.add(emoji)
+        }
+        order.entries.map { Triple(it.key, it.value, it.key in mineSet) }
+    }
+    if (grouped.isEmpty()) return
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 3.dp, bottom = 1.dp),
+        horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
+    ) {
+        grouped.forEach { (emoji, count, mine) ->
+            Row(
+                modifier = Modifier
+                    .padding(end = 4.dp)
+                    .background(
+                        if (mine) colorScheme.primary.copy(alpha = 0.16f) else colorScheme.surfaceVariant,
+                        RoundedCornerShape(50)
+                    )
+                    .border(
+                        1.dp,
+                        if (mine) colorScheme.primary.copy(alpha = 0.5f) else colorScheme.outline.copy(alpha = 0.5f),
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(emoji, fontSize = 12.sp)
+                if (count > 1) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "$count",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (mine) colorScheme.primary else colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -28,6 +28,9 @@ class BitchatApplication : Application() {
         // Initialize LocationNotesManager dependencies early so sheet subscriptions can start immediately
         try { com.bitchat.android.nostr.LocationNotesInitializer.initialize(this) } catch (_: Exception) { }
 
+        // Initialize the Locus layer before transports can deliver control traffic
+        try { com.bitchat.android.connect.ConnectManager.init(this) } catch (_: Exception) { }
+
         // Initialize favorites persistence early so MessageRouter/NostrTransport can use it on startup
         try {
             com.bitchat.android.favorites.FavoritesPersistenceService.initialize(this)
