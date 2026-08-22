@@ -101,11 +101,15 @@ class PermissionManager(private val context: Context) {
             ))
         }
 
-        // Location permissions (required for Bluetooth LE scanning)
-        permissions.addAll(listOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ))
+        // Location permissions — only where Android actually ties BLE scanning to them
+        // (API <= 30). On newer releases the manifest scans with neverForLocation and
+        // declares no location permission, so requesting one would never be granted.
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
+            permissions.addAll(listOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ))
+        }
 
         // Wi‑Fi Aware: Android 13+ requires NEARBY_WIFI_DEVICES runtime permission
         if (shouldRequireWifiAwarePermission()) {
@@ -265,21 +269,26 @@ class PermissionManager(private val context: Context) {
             )
         )
 
-        // Location category
-        val locationPermissions = listOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-
-        categories.add(
-            PermissionCategory(
-                type = PermissionType.PRECISE_LOCATION,
-                description = "Required by Android to discover nearby Locus users via Bluetooth",
-                permissions = locationPermissions,
-                isGranted = locationPermissions.all { isPermissionGranted(it) },
-                systemDescription = "Locus needs this to scan for nearby devices"
+        // Location category — ONLY on API <= 30. Above that the manifest declares
+        // BLUETOOTH_SCAN with neverForLocation and drops the location permissions
+        // entirely, so asking would request something that can never be granted and
+        // onboarding would never complete.
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
+            val locationPermissions = listOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
-        )
+
+            categories.add(
+                PermissionCategory(
+                    type = PermissionType.PRECISE_LOCATION,
+                    description = "Required by Android to discover nearby Locus users via Bluetooth",
+                    permissions = locationPermissions,
+                    isGranted = locationPermissions.all { isPermissionGranted(it) },
+                    systemDescription = "Locus needs this to scan for nearby devices"
+                )
+            )
+        }
 
         // Wi‑Fi Aware category (Android 13+)
         if (shouldRequireWifiAwarePermission()) {

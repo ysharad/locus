@@ -125,6 +125,13 @@ class LocationStatusManager(
         Log.d(TAG, "Checking location services status")
         
         return when {
+            // Android 12+ scans with BLUETOOTH_SCAN + neverForLocation, so the location
+            // toggle is irrelevant there — and we no longer even hold the permission.
+            // Only API <= 30 genuinely refuses to scan with location services off.
+            Build.VERSION.SDK_INT > Build.VERSION_CODES.R -> {
+                Log.d(TAG, "Location services not required on API ${Build.VERSION.SDK_INT}")
+                LocationStatus.ENABLED
+            }
             locationManager == null -> {
                 Log.e(TAG, "LocationManager not available on this device")
                 LocationStatus.NOT_AVAILABLE

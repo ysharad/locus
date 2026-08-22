@@ -32,8 +32,8 @@ android {
         applicationId = "com.goapps.locus"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 66
-        versionName = "0.32.0"
+        versionCode = 67
+        versionName = "0.32.1"
         buildConfigField(
             "String",
             "GITHUB_RELEASE_CERT_SHA256",
