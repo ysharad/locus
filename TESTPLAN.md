@@ -175,3 +175,22 @@ Product call: the Firebase relay is THE out-of-mesh path; Nostr was an unreachab
 - [ ] G3 firestore.rules deployed = repo version
 - [ ] G4 Release-signed AAB smoke test (R8) — debug≠release behavior (minify!)
 - [ ] G5 Play listing assets + Data Safety form consistency
+
+## Issue #31 — vc66/vc67 shipped a total discovery outage (2026-08-23 03:15–03:40)
+
+Symptom: "both phones are not able to discover each other anymore", surviving a charge and multiple restarts. Not a battery/power-saver fault (that hypothesis was wrong — max duty-cycle OFF window is 120 s; the Oppo had been silent for over an hour).
+
+Root cause: my own permission-reduction change. vc66 capped `ACCESS_FINE/COARSE_LOCATION` at `maxSdkVersion="30"` in the manifest, and vc67 fixed the two onboarding call sites — but `mesh/BluetoothPermissionManager.hasBluetoothPermissions()` still demanded both location permissions unconditionally. From API 31 up they can never be granted, so the check could never pass:
+
+    E BluetoothConnectionManager: Missing Bluetooth permissions
+    E BluetoothMeshService: Failed to start Bluetooth services
+
+Neither the scanner nor the advertiser ever started — the device went completely dark while the foreground service stayed green (`isForeground=true types=0x10`), which is what made it look like a peer problem rather than a self-inflicted one. **minSdk is 32, so the API<=30 branch is dead code on every supported device: this was 100% of users, not one phone.** The Nokia kept working only because it was still on a pre-vc66 build.
+
+Diagnosis that actually found it: `dumpsys bluetooth_manager` → GATT Scanner Map showed `com.goapps.locus` at 347 scans started / 347 stopped with no ongoing scan and a last scan an hour stale, while `ps -o ETIME` showed the process was 13 min old — i.e. the current process had never scanned once. Logcat alone hid it (the error is one line at startup, drowned by OEM noise).
+
+Fixes: location permissions gated behind `SDK_INT <= R` in `BluetoothPermissionManager`; also dropped the now-undeclared `FOREGROUND_SERVICE_TYPE_LOCATION` branch from `MeshForegroundService.startForegroundCompat` (latent SecurityException from the same manifest change).
+
+Verified on Oppo (locally-signed release APK, R8 on): scan started/stopped cycling, advertising up, `Device connected`, `Verified announce from f423ca0c57ac6b63 (anon4764)` and `PeerManager: Updated peer` — full mutual discovery of the Nokia, screen locked, within seconds of launch.
+
+Lesson: when a permission is removed from the manifest, grep every `checkSelfPermission` call site, not just the onboarding flow. A permission gate that can never be satisfied fails silently and looks exactly like a hardware/peer fault.
