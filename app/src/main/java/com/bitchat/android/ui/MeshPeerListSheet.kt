@@ -1978,7 +1978,10 @@ fun PrivateChatSheet(
                         currentChannel = null,
                         nickname = nickname,
                         colorScheme = colorScheme,
-                        showMediaButtons = true
+                        // Photo and voice attachments are off: they were inherited features
+                        // Locus never used, and they cost broad media + microphone permissions
+                        // that Play only grants when such media is core to the app.
+                        showMediaButtons = false
                     )
 
                     // Long-press actions (react / reply / copy / report) for the selected message.

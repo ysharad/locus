@@ -122,7 +122,10 @@ class PermissionManager(private val context: Context) {
      * Must be requested after foreground location permissions are granted.
      */
     fun needsBackgroundLocationPermission(): Boolean {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        // Never. The foreground service keeps the mesh scanning while the app is away, so
+        // ACCESS_BACKGROUND_LOCATION was dropped from the manifest — Play requires a filmed
+        // justification for it, and Locus never reads a coordinate in the first place.
+        return false
     }
 
     fun getBackgroundLocationPermission(): String? {

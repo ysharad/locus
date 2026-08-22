@@ -12,12 +12,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
     
     <!-- Location permission required for BLE scanning -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
     
     <!-- Notification permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -41,21 +40,14 @@
     <!-- Connected device foreground service type for BLE operations (API 34+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <!-- Data sync foreground service type (required when declaring dataSync) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- Location foreground service type required for BLE scanning in background -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+        <!-- Location foreground service type required for BLE scanning in background -->
+        <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     
     <!-- Microphone for voice notes -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Camera for QR verification -->
     <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Storage permissions for file sharing -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <!-- Haptic feedback permission -->
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -143,7 +135,7 @@
         <service
             android:name=".service.MeshForegroundService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice|dataSync|location"
+            android:foregroundServiceType="connectedDevice"
             tools:ignore="DataExtractionRules">
         </service>
 
@@ -175,7 +167,7 @@
              service so the APK download worker can run as dataSync work -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
+            android:foregroundServiceType="connectedDevice"
             tools:node="merge" />
 
         <!-- Opt-in online chat relay: wakes the app for new mail when it's closed. -->
