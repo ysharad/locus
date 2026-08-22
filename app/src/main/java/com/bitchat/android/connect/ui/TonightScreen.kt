@@ -98,7 +98,7 @@ fun TonightScreen(viewModel: ChatViewModel, onOpenChat: (String) -> Unit, onEdit
                     Text(TONIGHT_QUESTION, style = BodyStyle.copy(fontSize = 16.sp), color = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(14.dp))
                     Button(onClick = onEditCard, modifier = Modifier.height(46.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Copper, contentColor = OnCopper)) {
-                        Text("Answer on my card", style = BodyStyle.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+                        Text("Answer on my profile", style = BodyStyle.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
                     }
                 }
                 Spacer(Modifier.height(22.dp))

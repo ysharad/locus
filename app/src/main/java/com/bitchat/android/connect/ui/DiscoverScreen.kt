@@ -69,7 +69,7 @@ import kotlinx.coroutines.launch
  * everything here is built from profile cards heard over the mesh.
  */
 @Composable
-fun DiscoverScreen(viewModel: ChatViewModel, onInvite: () -> Unit = {}, onFilters: () -> Unit = {}) {
+fun DiscoverScreen(viewModel: ChatViewModel, onInvite: () -> Unit = {}, onFilters: () -> Unit = {}, onOpenChat: (String) -> Unit = {}, onWhoLiked: () -> Unit = {}) {
     val nearby by ConnectManager.nearby.collectAsState()
     val liked by ConnectManager.liked.collectAsState()
     val passed by ConnectManager.passed.collectAsState()
@@ -102,19 +102,31 @@ fun DiscoverScreen(viewModel: ChatViewModel, onInvite: () -> Unit = {}, onFilter
         matches.values.filter { it.peerID in connectedSet }.map { it.profile }
     }
 
+    // People the radio can hear who haven't aired a card yet. Still marked on the radar —
+    // someone physically in the room must never be invisible (hyperlocal north star).
+    val unknownPresent = remember(connectedSet, nearby, matches) {
+        connectedPeers.filter { it != myPeerID && it !in nearby && it !in matches }
+    }
+
+    // Cards you've already swiped (liked or passed) whose owner is still around. The deck is
+    // done with them, but the RADAR is a map of the room, not a to-do list — they stay on it,
+    // dimmed. Tapping re-opens the card (an undo for a hasty pass, a reminder for a like).
+    val seenPresent = remember(nearby, liked, passed, matches) {
+        nearby.values.filter {
+            (it.peerID in liked || it.peerID in passed) && it.peerID !in matches && it.peerID != myPeerID
+        }
+    }
+
     var radar by rememberSaveableBool()
     var tray by remember { mutableStateOf(false) }
     var peerSheet by remember { mutableStateOf<ConnectProfile?>(null) }
 
-    // Locus+ : who-likes-you is gated behind a rewarded video unless already unlocked for the day.
-    val revealUntil by ConnectManager.revealUntil.collectAsState()
-    var showRewardGate by remember { mutableStateOf(false) }
-    var watchingAd by remember { mutableStateOf(false) }
+    // Locus+ : the tray always opens; unrevealed admirers show blurred with one reveal button
+    // inside (per-batch, permanent — see TraySheet). No time windows, no separate gate sheet.
+    val revealedLikes by ConnectManager.revealedLikes.collectAsState()
+    var revealing by remember { mutableStateOf(false) }
     val activity = LocalContext.current as? Activity
-    val openTray = {
-        if (likesReceived.isEmpty() || System.currentTimeMillis() < revealUntil) tray = true
-        else showRewardGate = true
-    }
+    val openTray = { onWhoLiked() }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LocusField(
@@ -122,7 +134,7 @@ fun DiscoverScreen(viewModel: ChatViewModel, onInvite: () -> Unit = {}, onFilter
             animated = true,
             peerRings = if (radar) deck.indices.map { it % 5 } else emptyList(),
             originDot = true,
-            searching = deck.isEmpty() && connectionsInRange.isEmpty()
+            searching = deck.isEmpty() && connectionsInRange.isEmpty() && unknownPresent.isEmpty() && seenPresent.isEmpty()
         )
         Column(
             Modifier
@@ -145,7 +157,16 @@ fun DiscoverScreen(viewModel: ChatViewModel, onInvite: () -> Unit = {}, onFilter
 
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 when {
-                    radar -> RadarView(deck = deck, connections = connectionsInRange, connectedSet = connectedSet, onTap = { peerSheet = it })
+                    // An empty radar gets the same full empty state as the deck — title, one
+                    // line, and the Invite / Wake buttons — not a bare sentence.
+                    radar && deck.isEmpty() && connectionsInRange.isEmpty() && unknownPresent.isEmpty() && seenPresent.isEmpty() -> EmptyDeck(
+                        peersInRange = connectedPeers.size,
+                        hasPassed = passed.isNotEmpty(),
+                        admirers = likesReceived.size,
+                        onInvite = onInvite,
+                        onTray = openTray
+                    )
+                    radar -> RadarView(deck = deck, connections = connectionsInRange, connectedSet = connectedSet, unknowns = unknownPresent, seen = seenPresent, onTap = { peerSheet = it })
                     deck.isEmpty() -> EmptyDeck(
                         peersInRange = connectedPeers.size,
                         hasPassed = passed.isNotEmpty(),
@@ -161,38 +182,39 @@ fun DiscoverScreen(viewModel: ChatViewModel, onInvite: () -> Unit = {}, onFilter
     }
 
     if (tray) {
-        TraySheet(peerIDs = likesReceived, nearby = nearby, onDismiss = { tray = false })
-    }
-    if (showRewardGate) {
-        RevealGateSheet(
-            count = likesReceived.size,
-            watching = watchingAd,
-            onWatch = {
+        TraySheet(
+            peerIDs = likesReceived,
+            nearby = nearby,
+            revealed = revealedLikes,
+            revealing = revealing,
+            onReveal = {
+                val batch = likesReceived - revealedLikes
                 val act = activity
                 if (act == null) {
-                    showRewardGate = false
+                    // No activity to host an ad — never punish the user for our plumbing.
+                    ConnectManager.revealLikers(batch)
                 } else {
-                    watchingAd = true
+                    revealing = true
                     RewardedAds.show(
                         act,
-                        onReward = {
-                            ConnectManager.grantRevealLikes()
-                            watchingAd = false
-                            showRewardGate = false
-                            tray = true
-                        },
-                        onUnavailable = { watchingAd = false }
+                        onReward = { ConnectManager.revealLikers(batch); revealing = false },
+                        // No fill / failed to show → reveal anyway (fail-open by decision).
+                        onUnavailable = { ConnectManager.revealLikers(batch); revealing = false }
                     )
                 }
             },
-            onDismiss = { showRewardGate = false }
+            onDismiss = { tray = false }
         )
     }
     peerSheet?.let { p ->
         PeerSheet(
             profile = p,
-            onConnect = { ConnectManager.like(p.peerID); peerSheet = null },
-            onDismiss = { peerSheet = null }
+            // No instant close: the sheet shows "✓ Sent" for a beat, then dismisses itself.
+            onConnect = { ConnectManager.like(p.peerID) },
+            onDismiss = { peerSheet = null },
+            isConnection = p.peerID in matches,
+            alreadySent = p.peerID in liked,
+            onChat = { peerSheet = null; onOpenChat(p.peerID) }
         )
     }
 }
@@ -435,29 +457,20 @@ private fun RadarView(
     deck: List<ConnectProfile>,
     connections: List<ConnectProfile>,
     connectedSet: Set<String>,
+    unknowns: List<String> = emptyList(),
+    seen: List<ConnectProfile> = emptyList(),
     onTap: (ConnectProfile) -> Unit
 ) {
     // Nobody here at all — a calm message; the field behind is already scanning (searching=true).
-    if (deck.isEmpty() && connections.isEmpty()) {
+    if (deck.isEmpty() && connections.isEmpty() && unknowns.isEmpty() && seen.isEmpty()) {
         Column(
             Modifier.fillMaxSize().padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(7.dp).background(Jade, CircleShape))
-                Spacer(Modifier.width(8.dp))
-                Text("SCANNING NEARBY", style = EyebrowStyle.copy(letterSpacing = 0.16.em), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.height(14.dp))
+            // One line. The breathing field already says "scanning"; every extra word here
+            // was one more thing between a person and the room.
             Text("No one in range yet", style = TitleStyle.copy(fontSize = 26.sp), color = MaterialTheme.colorScheme.onBackground)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "People appear on the rings as they come\nwithin about 30 metres of you.",
-                style = BodyStyle,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
         }
         return
     }
@@ -468,12 +481,14 @@ private fun RadarView(
         animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing)),
         label = "ping"
     )
-    // Connections first (always plotted, distinct), then discoverable strangers. `true` = a connection.
-    val blips = remember(connections, deck) {
-        (connections.map { it to true } + deck.map { it to false }).take(8)
+    // Connections first (always plotted, distinct), then fresh discoverables, then cards you've
+    // already swiped but whose owner is still in the room (dim, steady — the room map is honest).
+    val blips = remember(connections, deck, seen) {
+        (connections.map { it to 0 } + deck.map { it to 1 } + seen.map { it to 2 }).take(8)
     }
     Box(Modifier.fillMaxSize()) {
-        blips.forEachIndexed { i, (p, isConnection) ->
+        blips.forEachIndexed { i, (p, kind) ->
+            val isConnection = kind == 0
             val near = isConnection || p.peerID in connectedSet
             val angle = (i * 51f % 360f)
             val ringFrac = 0.30f + (i % 4) * 0.16f
@@ -482,6 +497,7 @@ private fun RadarView(
             val yDp = -(kotlin.math.sin(rad).coerceAtLeast(0.05) * 320 * ringFrac).dp
             val ringColor = when {
                 isConnection -> Copper // a known connection — steady copper, clearly distinct from jade
+                kind == 2 -> MaterialTheme.colorScheme.outline // already swiped — quiet, no signal color
                 near -> Jade
                 else -> MaterialTheme.colorScheme.outlineVariant
             }
@@ -489,8 +505,8 @@ private fun RadarView(
                 Modifier.fillMaxSize().padding(bottom = 40.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                // Fresh discoverables near you pulse (jade); a connection sits steady (no ping).
-                if (!isConnection && near) {
+                // Fresh discoverables near you pulse (jade); connections and seen cards sit steady.
+                if (kind == 1 && near) {
                     Box(
                         Modifier
                             .offset(x = xDp, y = yDp)
@@ -506,6 +522,7 @@ private fun RadarView(
                     Modifier
                         .offset(x = xDp, y = yDp)
                         .size(if (near) 46.dp else 40.dp)
+                        .alpha(if (kind == 2) 0.6f else 1f)
                         .clip(CircleShape)
                         .background(if (isConnection) CopperTint else AvatarWell)
                         .border(if (isConnection) 2.5.dp else 1.5.dp, ringColor, CircleShape)
@@ -516,13 +533,44 @@ private fun RadarView(
                 }
             }
         }
-        Text(
-            if (connections.isEmpty()) "RING = HOW NEAR · ANGLE MEANS NOTHING"
-            else "COPPER = A CONNECTION · RING = HOW NEAR",
-            style = EyebrowStyle.copy(fontSize = 10.sp, letterSpacing = 0.1.em),
-            color = Slate,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp)
-        )
+        // Present but cardless — the radio hears them, they just haven't aired a profile.
+        // Shown as faint breathing marks: nobody physically in the room is ever invisible.
+        unknowns.take((8 - blips.size).coerceAtLeast(0)).forEachIndexed { j, _ ->
+            val i = blips.size + j
+            val angle = (i * 51f % 360f)
+            val ringFrac = 0.30f + (i % 4) * 0.16f
+            val rad = Math.toRadians(angle.toDouble())
+            val xDp = (kotlin.math.cos(rad) * 150 * ringFrac).dp
+            val yDp = -(kotlin.math.sin(rad).coerceAtLeast(0.05) * 320 * ringFrac).dp
+            Box(
+                Modifier.fillMaxSize().padding(bottom = 40.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    Modifier
+                        .offset(x = xDp, y = yDp)
+                        .size(44.dp)
+                        .graphicsLayer {
+                            val s = 1f + 1.1f * ping
+                            scaleX = s; scaleY = s; alpha = 0.4f * (1f - ping)
+                        }
+                        .border(1.5.dp, Jade, CircleShape)
+                )
+                Box(
+                    Modifier
+                        .offset(x = xDp, y = yDp)
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(AvatarWell)
+                        .border(1.5.dp, Jade.copy(alpha = 0.55f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("◌", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        // No legend line — the field explains itself, and every word here was one more thing
+        // between a person and the room. (North star: discovery stays effortless.)
     }
 }
 
@@ -537,13 +585,13 @@ private fun EmptyDeck(peersInRange: Int, hasPassed: Boolean, admirers: Int, onIn
         }
         Spacer(Modifier.height(40.dp))
         Text(
-            if (cleared) "That's everyone,\nfor now." else "No one in range yet.",
+            if (cleared) "That's everyone,\nfor now." else "No one in range yet",
             style = TitleStyle.copy(fontSize = 28.sp, lineHeight = 33.sp),
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            if (cleared) "Come back when the room turns over." else "Locus hears about 30 metres. Leave it open.",
+            if (cleared) "Everyone in range is already yours — they're on the radar and in Chats." else "Locus is listening nearby — leave it open.",
             style = BodyStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -556,18 +604,47 @@ private fun EmptyDeck(peersInRange: Int, hasPassed: Boolean, admirers: Int, onIn
                 colors = ButtonDefaults.buttonColors(containerColor = Copper, contentColor = OnCopper)
             ) {
                 Text(
-                    if (cleared && admirers > 0) "⚡ $admirers for you" else "Fill the room",
+                    if (cleared && admirers > 0) "⚡ $admirers for you" else "Invite",
                     style = BodyStyle.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
+            val wakeCtx = LocalContext.current
             OutlinedButton(
-                onClick = { if (hasPassed) ConnectManager.resetPasses() else ConnectManager.seedDemoProfiles() },
+                onClick = {
+                    if (hasPassed) ConnectManager.resetPasses()
+                    else {
+                        val sent = ConnectManager.wakeRoom()
+                        android.widget.Toast.makeText(
+                            wakeCtx,
+                            if (sent) "Wake sent — sleeping phones nearby will hear it."
+                            else "Room already woken — try again in a few minutes.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
                 modifier = Modifier.weight(1f).height(56.dp),
                 shape = RoundedCornerShape(18.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Text(if (hasPassed) "Review passes" else "Wake the room", style = BodyStyle, color = MaterialTheme.colorScheme.onSurface)
             }
+        }
+        // A quiet way to see the whole flow with nobody around — the first thing anyone
+        // alone in a room needs, reviewers included. Demo cards are local-only and never
+        // touch the mesh or disk.
+        if (!cleared) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Try a demo deck",
+                style = BodyStyle.copy(fontSize = 14.sp),
+                color = Slate,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { ConnectManager.seedDemoProfiles() }
+                    .padding(vertical = 10.dp)
+            )
         }
     }
 }

@@ -81,6 +81,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.bitchat.android.ui.theme.BitchatFontFamily
 import com.bitchat.android.R
@@ -1105,13 +1106,9 @@ private fun BubbleTextMessageLayout(
                         )
                     }
 
-                    Box(
-                        modifier = if (isSelf && metaPlan != null) {
-                            Modifier.width(with(density) { metaPlan!!.widthPx.toDp() })
-                        } else {
-                            Modifier
-                        }
-                    ) {
+                    // The meta line (time + delivery mark) now sits BELOW the bubble, so the
+                    // bubble no longer reserves inline space for it.
+                    Box {
                         AnnotatedClickableText(
                             text = bodyText,
                             annotationTags = listOf("geohash_click", "url_click"),
@@ -1133,13 +1130,6 @@ private fun BubbleTextMessageLayout(
                                 }
                             },
                             onLongPress = onLongPress,
-                            modifier = Modifier.padding(
-                                bottom = if (metaPlan?.reserveOwnLine == true) {
-                                    with(density) { clusterSize.height.toDp() }
-                                } else {
-                                    0.dp
-                                }
-                            ),
                             fontFamily = BitchatFontFamily,
                             softWrap = true,
                             overflow = TextOverflow.Visible,
@@ -1147,23 +1137,27 @@ private fun BubbleTextMessageLayout(
                             onTextLayout = { bodyLayout = it },
                         )
 
-                        if (isSelf) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .onSizeChanged { clusterSize = it }
-                                    .graphicsLayer { alpha = if (metaPlan != null) 1f else 0f },
-                            ) {
-                                Text(
-                                    text = formatTextMessageMetadata(message, timeFormatter),
-                                    fontFamily = BitchatFontFamily,
-                                )
-                                if (message.isPrivate) {
-                                    message.deliveryStatus?.let { status ->
-                                        Spacer(Modifier.width(4.dp))
-                                        DeliveryStatusIcon(status = status)
-                                    }
+                    }
+
+                    if (isSelf) {
+                        // Its own line under the text, hugging the end edge. NOT fillMaxWidth:
+                        // inside a widthIn-capped bubble that stretched every own bubble to the
+                        // maximum width, however short the message.
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .padding(top = 1.dp)
+                                .onSizeChanged { clusterSize = it },
+                        ) {
+                            Text(
+                                text = formatTextMessageMetadata(message, timeFormatter),
+                                fontFamily = BitchatFontFamily,
+                            )
+                            if (message.isPrivate) {
+                                message.deliveryStatus?.let { status ->
+                                    Spacer(Modifier.width(4.dp))
+                                    DeliveryStatusIcon(status = status)
                                 }
                             }
                         }
@@ -1355,42 +1349,40 @@ private fun deliveryCheckRank(status: DeliveryStatus): Int = when (status) {
 
 @Composable
 fun DeliveryStatusIcon(status: DeliveryStatus) {
+    // The mark states what happened in one word, not in checkmarks: QUEUED (no path yet),
+    // SENT (it left), READ (they opened it). Which transport carried it — mesh or relay —
+    // is our problem, not something to make the reader decode.
     val colorScheme = MaterialTheme.colorScheme
-    val (firstTarget, secondTarget) = deliveryCheckColors(status, colorScheme)
-    val first by animateColorAsState(
-        targetValue = firstTarget,
+    val dim = colorScheme.onSurface.copy(alpha = 0.4f)
+    val (label, target) = when (status) {
+        is DeliveryStatus.Read -> "READ" to colorScheme.primary
+        is DeliveryStatus.Delivered, is DeliveryStatus.PartiallyDelivered -> "SENT" to dim
+        is DeliveryStatus.Sent -> "SENT" to dim
+        is DeliveryStatus.Failed -> "FAILED" to colorScheme.error
+        else -> "QUEUED" to dim
+    }
+    val color by animateColorAsState(
+        targetValue = target,
         animationSpec = tween(BitchatMotion.QUICK_MS),
-        label = "firstCheckColor",
-    )
-    val second by animateColorAsState(
-        targetValue = secondTarget,
-        animationSpec = tween(BitchatMotion.QUICK_MS),
-        label = "secondCheckColor",
+        label = "deliveryMarkColor",
     )
 
-    // Snappy micro pop when the state advances to (more) acknowledged. Keyed on the rank, not
-    // the instance, because Delivered/Read carry timestamps that would retrigger it otherwise.
+    // Snappy micro pop when the state advances, keyed on rank so a re-delivered timestamp
+    // doesn't retrigger it.
     val scale = remember { Animatable(1f) }
     LaunchedEffect(deliveryCheckRank(status)) {
         if (deliveryCheckRank(status) >= 2) {
-            scale.snapTo(1.3f)
+            scale.snapTo(1.25f)
             scale.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 900f))
         }
     }
 
-    val text = remember(first, second) {
-        androidx.compose.ui.text.buildAnnotatedString {
-            pushStyle(androidx.compose.ui.text.SpanStyle(color = first))
-            append("✓")
-            pop()
-            pushStyle(androidx.compose.ui.text.SpanStyle(color = second))
-            append("✓")
-            pop()
-        }
-    }
     Text(
-        text = text,
-        fontSize = 10.sp,
+        text = label,
+        fontSize = 9.sp,
+        fontFamily = com.bitchat.android.ui.theme.LocusMonoFamily,
+        letterSpacing = 0.08.em,
+        color = color,
         fontWeight = FontWeight.Normal,
         modifier = Modifier.graphicsLayer {
             scaleX = scale.value

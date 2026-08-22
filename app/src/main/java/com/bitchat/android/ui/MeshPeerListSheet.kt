@@ -1813,16 +1813,28 @@ fun PrivateChatSheet(
         animationSpec = tween(BitchatMotion.STANDARD_MS, easing = FastOutSlowInEasing),
         label = "favoriteStarTint"
     )
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
-
     if (isPresented) {
-        BitchatBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = sheetState,
+        // A full-screen surface, NOT a ModalBottomSheet. The sheet was the source of every
+        // chat-transition glitch: drag-down revealed the inherited timeline behind it,
+        // the slide-up entrance made messages pop in after the frame, and its separate
+        // window fought the host's navigation. A conversation is a place, not a sheet.
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = colorScheme.background
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    // Pre-R the framework legacy-resizes the window for the IME, so
+                    // imePadding() here would double-inset (same trap as RoomScreen).
+                    .then(
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R)
+                            Modifier.imePadding()
+                        else Modifier
+                    )
+            ) {
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -1926,13 +1938,22 @@ fun PrivateChatSheet(
                                 // transport (mesh or relay) as ordinary text and reads as a quote.
                                 val quoted = replyingTo
                                 val toSend = if (quoted != null) "↳ ${replySnippet(quoted)}\n$body" else body
+                                // Clear the field on the FIRST tap, before the durable write.
+                                // Clearing in the completion callback left the text (and a live
+                                // send button) in place for the whole disk round-trip — every
+                                // extra impatient tap sent the same text again as a new message.
+                                val restore = messageText
+                                messageText = androidx.compose.ui.text.input.TextFieldValue("")
+                                viewModel.setConversationDraft(peerID, "")
+                                replyingTo = null
+                                forceScrollToBottom = !forceScrollToBottom
                                 viewModel.sendMessage(toSend) { accepted ->
-                                    if (accepted) {
-                                        messageText =
-                                            androidx.compose.ui.text.input.TextFieldValue("")
-                                        viewModel.setConversationDraft(peerID, "")
-                                        replyingTo = null
-                                        forceScrollToBottom = !forceScrollToBottom
+                                    if (!accepted) {
+                                        // Rejected (blocked peer / storage failure): hand the
+                                        // text back instead of silently losing it.
+                                        messageText = restore
+                                        viewModel.setConversationDraft(peerID, restore.text)
+                                        replyingTo = quoted
                                     }
                                 }
                             }
@@ -1998,34 +2019,6 @@ fun PrivateChatSheet(
                         },
                         title = titleText
                     ) {
-                        ConversationHeaderAction(
-                            onClick = { viewModel.toggleFavorite(peerID) },
-                            contentDescription = if (isFavorite) {
-                                stringResource(R.string.cd_remove_favorite)
-                            } else {
-                                stringResource(R.string.cd_add_favorite)
-                            }
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    if (isFavorite) {
-                                        R.drawable.ic_spec_star_filled
-                                    } else {
-                                        R.drawable.ic_spec_star
-                                    }
-                                ),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(HeaderIconSize)
-                                    .graphicsLayer {
-                                        rotationZ = starWobbleRotation.value
-                                        scaleX = starWobbleScale.value
-                                        scaleY = starWobbleScale.value
-                                    },
-                                tint = favoriteStarTint
-                            )
-                        }
-
                         if (isVerified) {
                             ConversationHeaderStatus {
                                 Icon(
@@ -2055,8 +2048,11 @@ fun PrivateChatSheet(
                             }
                         }
 
-                        val dismiss = LocalSheetDismiss.current
-                        CloseButton(onClick = { dismiss?.invoke() ?: onDismiss() })
+                        // Deliberately NOT LocalSheetDismiss: the animated dismissal keeps this
+                        // sheet (and the inherited screen behind it) on screen for its exit
+                        // animation — the "flash of another chat" on close. Plain onDismiss lets
+                        // the host leave the tab in the same frame, which unmounts everything.
+                        CloseButton(onClick = { onDismiss() })
                     }
                 }
             }

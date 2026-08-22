@@ -59,7 +59,7 @@ import com.bitchat.android.ui.theme.BitchatMotion
  * - ChatUIUtils: Utility functions for formatting and colors
  */
 @Composable
-fun ChatScreen(viewModel: ChatViewModel) {
+fun ChatScreen(viewModel: ChatViewModel, onPrivateChatClosing: (() -> Unit)? = null) {
     val colorScheme = MaterialTheme.colorScheme
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val connectedPeers by viewModel.connectedPeers.collectAsStateWithLifecycle()
@@ -556,6 +556,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
         onSecurityVerificationSheetDismiss = viewModel::hideSecurityVerificationSheet,
         showMeshPeerListSheet = showMeshPeerListSheet,
         onMeshPeerListDismiss = viewModel::hideMeshPeerList,
+        onPrivateChatClosing = onPrivateChatClosing,
     )
 
     legacyPrivateMediaConsent?.let { request ->
@@ -838,6 +839,7 @@ private fun ChatDialogs(
     onSecurityVerificationSheetDismiss: () -> Unit,
     showMeshPeerListSheet: Boolean,
     onMeshPeerListDismiss: () -> Unit,
+    onPrivateChatClosing: (() -> Unit)? = null,
 ) {
     val privateChatSheetPeer by viewModel.privateChatSheetPeer.collectAsStateWithLifecycle()
 
@@ -929,6 +931,9 @@ private fun ChatDialogs(
             peerID = privateChatSheetPeer!!,
             viewModel = viewModel,
             onDismiss = {
+                // Let the host leave this screen in the SAME frame the close starts —
+                // otherwise the inherited timeline behind the sheet flashes into view.
+                onPrivateChatClosing?.invoke()
                 viewModel.hidePrivateChatSheet()
                 viewModel.endPrivateChat()
             }

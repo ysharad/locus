@@ -637,43 +637,9 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
                     com.bitchat.android.favorites.FavoritesPersistenceService.shared.updateNostrPublicKeyForPeerID(fromPeerID, control.npub)
                 }
 
-                val rel = com.bitchat.android.favorites.FavoritesPersistenceService.shared.getFavoriteStatus(noiseKey)
-                val guidance = if (control.isFavorite) {
-                    if (rel?.isFavorite == true) {
-                        " — mutual! You can continue DMs via Nostr when out of mesh."
-                    } else {
-                        " — favorite back to continue DMs later."
-                    }
-                } else {
-                    ". DMs over Nostr will pause unless you both favorite again."
-                }
-
-                val action = if (control.isFavorite) "favorited" else "unfavorited"
-                val notice = "${peerInfo.nickname} $action you$guidance"
-                val sys = com.bitchat.android.model.BitchatMessage(
-                    sender = "system",
-                    content = notice,
-                    timestamp = java.util.Date(),
-                    isRelay = false
-                )
-                delegate?.onMessageReceived(sys)
-
-                // Mirror the notice into the private conversation so it's visible while chatting
-                try {
-                    val conversationID = com.bitchat.android.services.ContactDirectory
-                        .canonicalConversationId(fromPeerID)
-                    val sysPrivate = com.bitchat.android.model.BitchatMessage(
-                        sender = "system",
-                        content = notice,
-                        timestamp = java.util.Date(),
-                        isRelay = false,
-                        isPrivate = true,
-                        senderPeerID = conversationID
-                    )
-                    delegate?.onMessageReceived(sysPrivate)
-                } catch (_: Exception) {
-                    // Best-effort; public notice already delivered
-                }
+                // State only — no chat/room notices. The upstream copy pitched Nostr DM
+                // continuation, which isn't Locus's out-of-mesh path (the Firebase relay is),
+                // and a favorite is personal: it must never surface on the shared Room board.
             }
         } catch (_: Exception) {
             // Best-effort; ignore errors

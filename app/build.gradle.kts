@@ -32,8 +32,8 @@ android {
         applicationId = "com.goapps.locus"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 26
-        versionName = "0.21.1"
+        versionCode = 65
+        versionName = "0.31.4"
         buildConfigField(
             "String",
             "GITHUB_RELEASE_CERT_SHA256",
@@ -123,6 +123,12 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            // Tor is severed (Firebase relay is the out-of-mesh path); nothing can reach
+            // ArtiNative, so ship without the 5.4MB-per-ABI Arti library. The .so stays in
+            // src/main/jniLibs for an easy revert.
+            excludes += "**/libarti_android.so"
+        }
     }
     lint {
         baseline = file("lint-baseline.xml")
@@ -206,6 +212,12 @@ dependencies {
 
     // Google Play Services Location
     implementation(libs.gms.location)
+
+    // Play In-App Review (the review prompt after a match/chat milestone)
+    implementation(libs.play.review)
+
+    // Google sign-in — the private identity anchor behind the verified badge
+    implementation(libs.play.services.auth)
 
     // Firebase (phase 2 backend): anonymous auth bound to the mesh fingerprint + profile sync
     implementation(platform(libs.firebase.bom))

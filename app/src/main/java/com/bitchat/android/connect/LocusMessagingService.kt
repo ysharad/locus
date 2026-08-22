@@ -50,7 +50,7 @@ class LocusMessagingService : FirebaseMessagingService() {
         // One notification per sender (latest line as the preview).
         messages.groupBy { it.first }.forEach { (from, lines) ->
             val n = NotificationCompat.Builder(context, CHANNEL)
-                .setSmallIcon(com.bitchat.android.R.drawable.ic_launcher_monochrome)
+                .setSmallIcon(com.bitchat.android.R.drawable.ic_notification)
                 .setContentTitle(from)
                 .setContentText(lines.last().second)
                 .setAutoCancel(true)

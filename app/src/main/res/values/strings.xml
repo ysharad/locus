@@ -47,7 +47,7 @@
   <string name="notification_summary_more">and %1$d more</string>
   <string name="notification_messages_from_people">%1$d messages from %2$d people</string>
   <string name="notification_more_conversations">and %1$d more conversations</string>
-  <string name="notification_active_peers_title">Locusors nearby!</string>
+  <string name="notification_active_peers_title">People nearby</string>
   <string name="notification_active_peers_one">1 person around</string>
   <string name="notification_active_peers_many">%1$d people around</string>
   <string name="notification_new_messages">New Messages</string>
@@ -69,7 +69,7 @@
   <!-- Mesh Service Foreground Notification -->
   <string name="mesh_service_channel_name">Mesh Background Service</string>
   <string name="mesh_service_channel_desc">Keeps the Bluetooth mesh running in the background</string>
-    <string name="mesh_service_notification_content">Mesh running — %1$d peers</string>
+    <string name="mesh_service_notification_content">Locus is running — %1$d in range</string>
 
   <!-- Favorites accessibility -->
   <string name="cd_add_favorite">Add to favorites</string>
@@ -525,15 +525,15 @@
   <!-- Onboarding screens -->
   <string name="location_services_required">Location Services Required</string>
   <string name="privacy_first">Privacy First</string>
-  <string name="location_explanation">Locus does NOT track your location.\n\nLocation services are required for Bluetooth scanning and for the Geohash chat feature.</string>
+  <string name="location_explanation">Android requires location access for Bluetooth scanning. Locus never tracks where you are.</string>
   <string name="location_needs_for">Locus needs location services for:</string>
-  <string name="location_needs_bullets">• Bluetooth device scanning\n• Discovering nearby users on mesh network\n• Geohash chat feature\n• No tracking or location collection</string>
+  <string name="location_needs_bullets">• Find people nearby\n• Never used to track you</string>
   <string name="background_location_required_title">Background Location Recommended</string>
   <string name="background_location_required_subtitle">Optional, improves mesh reliability</string>
-  <string name="background_location_explanation">Android recommends background location so Locus can scan for nearby devices while the app is not open. This keeps the mesh alive after reboot.</string>
-  <string name="background_location_settings_tip">When settings opens, choose "Allow all the time".</string>
+  <string name="background_location_explanation">Lets Locus keep noticing people nearby while the app is closed.</string>
+  <string name="background_location_settings_tip">Choose “Allow all the time”.</string>
   <string name="background_location_needs_for">Locus uses background location for:</string>
-  <string name="background_location_needs_bullets">- Scan for nearby devices while the app is closed\n- Reconnect after reboot\n- Keep the mesh running in the background</string>
+  <string name="background_location_needs_bullets">• Keep discovering while the app is closed</string>
   <string name="background_location_privacy_note">We NEVER collect or store your location. Your privacy is safe.</string>
   <string name="grant_background_location">Allow Background Location</string>
   <string name="skip_background_location">Continue without background location</string>
@@ -544,16 +544,16 @@
   <string name="checking_location_services">Checking location services...</string>
   <string name="bluetooth_required">Bluetooth Required</string>
   <string name="bluetooth_needs_for">Locus needs Bluetooth to:</string>
-  <string name="bluetooth_needs_bullets">• Discover nearby users\n• Create mesh network connections\n• Send and receive messages\n• Work without internet or servers</string>
+  <string name="bluetooth_needs_bullets">• Find people nearby\n• Chat with no internet</string>
   <string name="enable_bluetooth">Enable Bluetooth</string>
   <string name="bluetooth_not_supported">Bluetooth Not Supported</string>
-  <string name="bluetooth_unsupported_explanation">This device doesn\'t support Bluetooth Low Energy (BLE), which is required for Locus to function.\n\nLocus needs BLE to create mesh networks and communicate with nearby devices without internet.</string>
+  <string name="bluetooth_unsupported_explanation">This phone doesn’t support Bluetooth Low Energy, which Locus needs to find people nearby.</string>
   <string name="checking_bluetooth_status">Checking Bluetooth status...</string>
   <string name="battery_optimization_detected_title">Battery optimization detected</string>
   <string name="battery_optimization_enabled_title">Battery Optimization Enabled</string>
-  <string name="battery_optimization_explanation_short">Locus needs to run in the background to maintain mesh connections. Battery optimization can interrupt these connections.</string>
+  <string name="battery_optimization_explanation_short">Stops Android putting Locus to sleep, so messages arrive.</string>
   <string name="benefits_of_disabling">Benefits of Disabling</string>
-  <string name="battery_benefits_short">• Reliable message delivery\n• Maintains mesh connectivity\n• Prevents connection drops</string>
+  <string name="battery_benefits_short">• Messages arrive reliably\n• You stay visible in the room</string>
   <string name="disable_battery_optimization">Disable Battery Optimization</string>
   <string name="battery_optimization_disabled_title">Battery optimization disabled</string>
   <string name="continue_btn">Continue</string>
@@ -566,7 +566,7 @@
   <string name="try_again">Try Again</string>
   <string name="open_settings">Open Settings</string>
   <string name="privacy_protected">Your Privacy is Protected</string>
-  <string name="privacy_bullets">• No tracking or data collection\n• Bluetooth mesh chats are fully offline\n• Geohash chats use the internet</string>
+  <string name="privacy_bullets">• Nothing is tracked or collected\n• Chats work with no internet</string>
   <string name="permissions_header">Permissions</string>
   <string name="grant_permissions">Grant Permissions</string>
   <string name="location_tracking_warning">Locus does NOT track your location</string>

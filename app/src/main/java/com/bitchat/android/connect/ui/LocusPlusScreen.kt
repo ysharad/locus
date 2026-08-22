@@ -43,17 +43,21 @@ import com.bitchat.android.ui.RewardedAds
  * card so nearby decks resort you to the front). Both are honest — no locked messages, no paywalls.
  */
 @Composable
-fun LocusPlusScreen(onClose: () -> Unit) {
+fun LocusPlusScreen(onClose: () -> Unit, onWhoLiked: () -> Unit = {}) {
     val activity = LocalContext.current as? Activity
-    val revealUntil by ConnectManager.revealUntil.collectAsState()
+    val likesReceived by ConnectManager.likesReceived.collectAsState()
+    val revealedLikes by ConnectManager.revealedLikes.collectAsState()
     val boostUntil by ConnectManager.boostUntil.collectAsState()
     val visible by ConnectManager.visible.collectAsState()
     val now = System.currentTimeMillis()
-    val revealActive = now < revealUntil
+    val hiddenCount = (likesReceived - revealedLikes).size
     val boosted = now < boostUntil
 
     var watching by remember { mutableStateOf(false) }
     var boostHint by remember { mutableStateOf<String?>(null) }
+    var showTray by remember { mutableStateOf(false) }
+    var revealing by remember { mutableStateOf(false) }
+    val nearby by ConnectManager.nearby.collectAsState()
 
     fun watchThen(onReward: () -> Unit) {
         val act = activity ?: return
@@ -93,16 +97,21 @@ fun LocusPlusScreen(onClose: () -> Unit) {
         )
         Spacer(Modifier.height(20.dp))
 
-        // Reveal perk
+        // Reveal perk — per-wave, permanent. One video unblurs everyone hidden right now,
+        // forever; new admirers arrive hidden. No timers, no rent.
         PerkCard(
-            glyph = "⚡",
+            glyph = "+",
             title = "See who likes you",
-            body = "Reveal everyone who swiped you first. Stays open for 24 hours.",
-            statusText = if (revealActive) "UNLOCKED · ${hoursLeft(revealUntil - now)} LEFT" else null,
-            statusColor = Jade,
-            buttonLabel = if (revealActive) "Watch to extend" else "Watch & reveal",
-            watching = watching,
-            onWatch = { watchThen { ConnectManager.grantRevealLikes() } }
+            body = "One video reveals everyone who swiped you first — forever. New admirers arrive hidden.",
+            statusText = when {
+                hiddenCount > 0 -> "$hiddenCount HIDDEN RIGHT NOW"
+                likesReceived.isNotEmpty() -> "ALL REVEALED"
+                else -> "NO ONE YET — STAY DISCOVERABLE"
+            },
+            statusColor = if (hiddenCount > 0) Copper else Jade,
+            buttonLabel = "See who ⚡",
+            watching = false,
+            onWatch = { onWhoLiked() }
         )
         Spacer(Modifier.height(14.dp))
 
@@ -110,7 +119,7 @@ fun LocusPlusScreen(onClose: () -> Unit) {
         PerkCard(
             glyph = "◎",
             title = "Boost",
-            body = "Put your card back on the air so nearby decks resort you to the front, right now.",
+            body = "Put your profile back on the air so nearby decks resort you to the front, right now.",
             statusText = when {
                 boosted -> "BOOSTED · AT THE FRONT"
                 !visible -> "YOU'RE INVISIBLE — TURN ON VISIBLE FIRST"
@@ -143,6 +152,31 @@ fun LocusPlusScreen(onClose: () -> Unit) {
         )
         Spacer(Modifier.height(24.dp))
     }
+
+    if (showTray) {
+        TraySheet(
+            peerIDs = likesReceived,
+            nearby = nearby,
+            revealed = revealedLikes,
+            revealing = revealing,
+            onReveal = {
+                val batch = likesReceived - revealedLikes
+                val act = activity
+                if (act == null) {
+                    ConnectManager.revealLikers(batch)
+                } else {
+                    revealing = true
+                    RewardedAds.show(
+                        act,
+                        onReward = { ConnectManager.revealLikers(batch); revealing = false },
+                        // Fail-open: no fill never blocks a reveal.
+                        onUnavailable = { ConnectManager.revealLikers(batch); revealing = false }
+                    )
+                }
+            },
+            onDismiss = { showTray = false }
+        )
+    }
 }
 
 @Composable
@@ -165,7 +199,7 @@ private fun PerkCard(
             .padding(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(glyph, fontSize = 22.sp, color = Copper)
+            Text(glyph, fontSize = 26.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = LocusGold)
             Spacer(Modifier.width(12.dp))
             Text(title, style = ListNameStyle.copy(fontSize = 19.sp), color = MaterialTheme.colorScheme.onSurface)
         }
@@ -199,9 +233,3 @@ private fun PerkCard(
     }
 }
 
-private fun hoursLeft(ms: Long): String {
-    val hours = ms / 3_600_000L
-    if (hours >= 1) return "${hours}H"
-    val minutes = (ms / 60_000L).coerceAtLeast(1)
-    return "${minutes}M"
-}

@@ -30,6 +30,12 @@ object ChatRelay {
     @Volatile private var registration: ListenerRegistration? = null
     @Volatile private var appContext: Context? = null
 
+    // Recipient chatPubKey cache: one Firestore read per peer per session instead of per message.
+    // Short TTL so a peer rotating keys (reinstall) is picked up within minutes.
+    private const val KEY_CACHE_TTL_MS = 10 * 60 * 1000L
+    private val recipientKeyCache = java.util.concurrent.ConcurrentHashMap<String, Pair<ByteArray, Long>>()
+    @Volatile private var ownKeyPublished = false
+
     private fun db() = FirebaseFirestore.getInstance()
 
     private fun ensureAuth(block: () -> Unit) {
@@ -50,33 +56,49 @@ object ChatRelay {
         val ctx = context.applicationContext
         val plaintext = msg.content.toByteArray()
         ensureAuth {
-            // Look up the recipient's published chat public key.
-            db().collection("profiles").document(recipientFingerprint).get()
-                .addOnSuccessListener { doc ->
-                    val pubB64 = doc.getString("chatPubKey") ?: return@addOnSuccessListener
-                    try {
-                        val recipientPub = Base64.decode(pubB64, Base64.NO_WRAP)
-                        val sealed = ChatCrypto.seal(recipientPub, plaintext)
-                        val payload = mapOf(
-                            "from" to myFingerprint,
-                            "fromName" to senderName,
-                            "ct" to Base64.encodeToString(sealed, Base64.NO_WRAP),
-                            "id" to msg.id,
-                            "ts" to (msg.timestamp.time),
-                            "createdAt" to FieldValue.serverTimestamp()
-                        )
-                        db().collection("mailbox").document(recipientFingerprint)
-                            .collection("messages").document(msg.id)
-                            .set(payload)
-                            .addOnFailureListener { Log.i(TAG, "mailbox write failed: ${it.message}") }
-                    } catch (e: Exception) {
-                        Log.i(TAG, "seal failed: ${e.message}")
-                    }
+            val sealAndWrite: (ByteArray) -> Unit = { recipientPub ->
+                try {
+                    val sealed = ChatCrypto.seal(recipientPub, plaintext)
+                    val payload = mapOf(
+                        "from" to myFingerprint,
+                        "fromName" to senderName,
+                        "ct" to Base64.encodeToString(sealed, Base64.NO_WRAP),
+                        "id" to msg.id,
+                        "ts" to (msg.timestamp.time),
+                        "createdAt" to FieldValue.serverTimestamp()
+                    )
+                    db().collection("mailbox").document(recipientFingerprint)
+                        .collection("messages").document(msg.id)
+                        .set(payload)
+                        .addOnFailureListener { Log.i(TAG, "mailbox write failed: ${it.message}") }
+                } catch (e: Exception) {
+                    Log.i(TAG, "seal failed: ${e.message}")
                 }
-                .addOnFailureListener { Log.i(TAG, "recipient key lookup failed: ${it.message}") }
-            // Keep the on-file public key fresh for others sealing to us.
-            db().collection("profiles").document(myFingerprint)
-                .set(mapOf("chatPubKey" to ChatKeys.publicKeyB64(ctx)), com.google.firebase.firestore.SetOptions.merge())
+            }
+            val cached = recipientKeyCache[recipientFingerprint]
+            if (cached != null && System.currentTimeMillis() - cached.second < KEY_CACHE_TTL_MS) {
+                sealAndWrite(cached.first)
+            } else {
+                db().collection("profiles").document(recipientFingerprint).get()
+                    .addOnSuccessListener { doc ->
+                        val pubB64 = doc.getString("chatPubKey") ?: return@addOnSuccessListener
+                        try {
+                            val recipientPub = Base64.decode(pubB64, Base64.NO_WRAP)
+                            recipientKeyCache[recipientFingerprint] = recipientPub to System.currentTimeMillis()
+                            sealAndWrite(recipientPub)
+                        } catch (e: Exception) {
+                            Log.i(TAG, "recipient key decode failed: ${e.message}")
+                        }
+                    }
+                    .addOnFailureListener { Log.i(TAG, "recipient key lookup failed: ${it.message}") }
+            }
+            // Keep the on-file public key fresh for others sealing to us — once per process,
+            // not once per message (startListening also publishes it on every relay start).
+            if (!ownKeyPublished) {
+                ownKeyPublished = true
+                db().collection("profiles").document(myFingerprint)
+                    .set(mapOf("chatPubKey" to ChatKeys.publicKeyB64(ctx)), com.google.firebase.firestore.SetOptions.merge())
+            }
         }
     }
 
@@ -137,12 +159,16 @@ object ChatRelay {
                                 // "contact_<fingerprint>" is the canonical conversation id — lands
                                 // in the same thread as mesh messages from this person.
                                 val ok = AppStateStore.addPrivateMessageDurably("contact_$from", message)
-                                // Only remove the server copy once it's safely persisted (or already
-                                // present). A transient failure (DB not ready, writes suspended)
-                                // keeps the ciphertext so a later drain can retry — never lose it.
+                                // Persisted → delete the server copy and ring. A DUPE (mesh got
+                                // there first) also deletes — silently — or the doc would sit in
+                                // the mailbox forever and be re-scanned on every drain (issue #25).
+                                // Only a transient failure (DB not ready, writes suspended) keeps
+                                // the ciphertext so a later drain can retry — never lose it.
                                 if (ok) {
                                     d.reference.delete()
                                     notifier?.invoke("contact_$from", fromName, plaintext)
+                                } else if (AppStateStore.hasSeenMessage(id)) {
+                                    d.reference.delete()
                                 }
                             }
                         } catch (e: Exception) {
@@ -212,12 +238,14 @@ object ChatRelay {
                         deliveryStatus = DeliveryStatus.Delivered(to = myNickname, at = Date())
                     )
                     val ok = kotlinx.coroutines.runBlocking { AppStateStore.addPrivateMessageDurably("contact_$from", message) }
-                    // Delete + notify only when it actually persisted (or was already present).
-                    // A transient failure keeps the ciphertext for the next drain, and a dedupe
-                    // (already delivered over mesh) won't raise a second notification.
+                    // Persisted → delete + notify. A dupe (already delivered over mesh) deletes
+                    // WITHOUT notifying so the doc doesn't haunt every future drain (issue #25).
+                    // Only a transient failure keeps the ciphertext for the next drain.
                     if (ok) {
                         com.google.android.gms.tasks.Tasks.await(d.reference.delete())
                         delivered.add(fromName to plaintext)
+                    } else if (AppStateStore.hasSeenMessage(id)) {
+                        com.google.android.gms.tasks.Tasks.await(d.reference.delete())
                     }
                 } catch (e: Exception) {
                     Log.i(TAG, "drain decrypt failed (${d.id}): ${e.message}")

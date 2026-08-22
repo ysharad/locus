@@ -14,11 +14,27 @@ data class ConnectProfile(
     val name: String = "",
     val age: Int? = null,
     val emoji: String = "🜂",
+    /** Glyph tint, ARGB. 0 = use the theme's default (copper). */
+    val glyphColor: Int = 0,
     val bio: String = "",
     val vibes: List<String> = emptyList(),
     val hereTo: String = "",
-    val updatedAt: Long = 0L
+    val updatedAt: Long = 0L,
+    // Identity birth time — drives the NEW badge. Self-reported over mesh (claim-level);
+    // the Firestore copy is what moderation trusts.
+    val createdAt: Long = 0L,
+    // Signed-in-with-Google verification. Peers see this as a claim over mesh; the
+    // authoritative copy lives in Firestore and is only ever written server-side.
+    val verified: Boolean = false
 ) {
+    /** The owner's chosen glyph tint, or null to use the theme default. */
+    fun glyphTintOrNull(): androidx.compose.ui.graphics.Color? =
+        if (glyphColor != 0) androidx.compose.ui.graphics.Color(glyphColor) else null
+
+    /** NEW = young or unknown identity that hasn't verified. Unknown counts as new on purpose. */
+    fun isNew(now: Long = System.currentTimeMillis()): Boolean =
+        !verified && (createdAt <= 0L || now - createdAt < NEW_WINDOW_MS)
+
     fun toJson(): String {
         val o = JSONObject()
         o.put("v", 1)
@@ -28,6 +44,9 @@ data class ConnectProfile(
         if (bio.isNotBlank()) o.put("b", bio.take(MAX_BIO))
         if (vibes.isNotEmpty()) o.put("t", JSONArray(vibes.take(MAX_VIBES).map { it.take(24) }))
         if (hereTo.isNotBlank()) o.put("h", hereTo.take(48))
+        if (createdAt > 0L) o.put("c", createdAt)
+        if (verified) o.put("vf", 1)
+        if (glyphColor != 0) o.put("gc", glyphColor)
         return o.toString()
     }
 
@@ -35,6 +54,7 @@ data class ConnectProfile(
         const val MAX_NAME = 32
         const val MAX_BIO = 160
         const val MAX_VIBES = 5
+        const val NEW_WINDOW_MS = 7L * 24 * 60 * 60 * 1000
 
         fun fromJson(json: String, senderPeerID: String, receivedAt: Long): ConnectProfile? = try {
             val o = JSONObject(json)
@@ -51,7 +71,10 @@ data class ConnectProfile(
                     }
                 } ?: emptyList(),
                 hereTo = o.optString("h").take(48),
-                updatedAt = receivedAt
+                updatedAt = receivedAt,
+                createdAt = o.optLong("c", 0L),
+                verified = o.optInt("vf", 0) == 1,
+                glyphColor = o.optInt("gc", 0)
             )
         } catch (_: Exception) {
             null
@@ -75,6 +98,7 @@ object ConnectSignal {
     private const val WAVE = "${PREFIX}W|"
     private const val REACT = "${PREFIX}R|"
     private const val TYPING = "${PREFIX}T|"
+    private const val WAKE_ROOM = "${PREFIX}K|"
 
     fun isConnectContent(content: String): Boolean = content.startsWith(PREFIX)
 
@@ -90,6 +114,9 @@ object ConnectSignal {
      * A reaction on a specific message: `BCX1|R|<messageId>|<emoji>`. An empty emoji clears the
      * sender's reaction on that message. The messageId is a UUID (no `|`), so a limit-2 split is safe.
      */
+    fun encodeWakeRoom(): String = WAKE_ROOM
+    fun isWakeRoom(content: String): Boolean = content.startsWith(WAKE_ROOM)
+
     fun encodeReaction(messageId: String, emoji: String): String = "$REACT$messageId|$emoji"
     fun isReaction(content: String): Boolean = content.startsWith(REACT)
     fun parseReaction(content: String): Pair<String, String>? {

@@ -71,6 +71,18 @@ class ConnectStore(context: Context) {
     fun isKeepChats(): Boolean = prefs.getBoolean(KEY_KEEP_CHATS, false)
     fun setKeepChats(on: Boolean) = prefs.edit().putBoolean(KEY_KEEP_CHATS, on).apply()
 
+    // Likers the user has revealed (by watching an ad, or fail-open when no ad had fill).
+    // Permanent: a reveal is never un-earned. New admirers arrive blurred.
+    fun revealedLikes(): Set<String> = prefs.getStringSet("revealed_likes", emptySet()) ?: emptySet()
+    fun addRevealedLikes(ids: Set<String>) {
+        val next = revealedLikes().toMutableSet().apply { addAll(ids) }
+        prefs.edit().putStringSet("revealed_likes", next).apply()
+    }
+
+    // One-time "keep this chat?" nudge, fired the first time a chat with a real reply is closed.
+    fun isKeepChatsNudged(): Boolean = prefs.getBoolean("keepchats_nudged", false)
+    fun setKeepChatsNudged() = prefs.edit().putBoolean("keepchats_nudged", true).apply()
+
     /** Presence: whether your card is broadcast. Default visible. */
     fun isVisible(): Boolean = prefs.getBoolean(KEY_VISIBLE, true)
     fun setVisible(on: Boolean) = prefs.edit().putBoolean(KEY_VISIBLE, on).apply()
@@ -84,6 +96,9 @@ class ConnectStore(context: Context) {
     fun setNotifyNearby(on: Boolean) = prefs.edit().putBoolean(KEY_NOTIFY_NEARBY, on).apply()
     fun isNotifyMessages(): Boolean = prefs.getBoolean(KEY_NOTIFY_MSGS, true)
     fun setNotifyMessages(on: Boolean) = prefs.edit().putBoolean(KEY_NOTIFY_MSGS, on).apply()
+
+    fun str(key: String, default: String = ""): String = prefs.getString(key, default) ?: default
+    fun setStr(key: String, value: String) = prefs.edit().putString(key, value).apply()
 
     fun bool(key: String, default: Boolean): Boolean = prefs.getBoolean(key, default)
     fun setBool(key: String, on: Boolean) = prefs.edit().putBoolean(key, on).apply()

@@ -59,7 +59,9 @@ private fun glyphFor(name: String): String = ROOM_GLYPHS[(name.hashCode() and 0x
 fun RoomScreen(viewModel: ChatViewModel, onTonight: () -> Unit = {}) {
     val messages by viewModel.messages.collectAsState()
     val connectedPeers by viewModel.connectedPeers.collectAsState()
-    val public = remember(messages) { messages.filter { !it.isPrivate } }
+    // The Room is a shared board: human posts only. App/system notices (favorites, connection
+    // chatter, and anything else personal) never belong on it.
+    val public = remember(messages) { messages.filter { !it.isPrivate && it.sender != "system" } }
     val timeFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val listState = rememberLazyListState()
     var draft by remember { mutableStateOf("") }
@@ -82,6 +84,30 @@ fun RoomScreen(viewModel: ChatViewModel, onTonight: () -> Unit = {}) {
         Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("The Room", style = TitleStyle.copy(fontSize = 26.sp), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+                // The room code: same place + same hour derives the same code on every phone,
+                // no server. Tap shares it — it's the one Locus object that travels.
+                val roomCtx = androidx.compose.ui.platform.LocalContext.current
+                val roomCode = remember { com.bitchat.android.connect.RoomCode.current(roomCtx) }
+                if (roomCode != null) {
+                    Text(
+                        roomCode, style = EyebrowStyle.copy(fontSize = 12.sp, letterSpacing = 0.12.em), color = Copper,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(50))
+                            .clickable {
+                                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(
+                                        android.content.Intent.EXTRA_TEXT,
+                                        "We're on Locus — room $roomCode. Get it: https://play.google.com/store/apps/details?id=com.goapps.locus"
+                                    )
+                                }
+                                roomCtx.startActivity(android.content.Intent.createChooser(send, "Share room code"))
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
                 Text(
                     "TONIGHT", style = EyebrowStyle.copy(fontSize = 12.sp), color = Jade,
                     modifier = Modifier.clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(50)).clickable { onTonight() }.padding(horizontal = 12.dp, vertical = 6.dp)

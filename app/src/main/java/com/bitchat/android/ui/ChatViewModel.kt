@@ -632,12 +632,6 @@ class ChatViewModel(
         verificationHandler.loadVerifiedFingerprints()
 
 
-        // Ensure NostrTransport knows our mesh peer ID for embedded packets
-        try {
-            val nostrTransport = com.bitchat.android.nostr.NostrTransport.getInstance(getApplication())
-            nostrTransport.senderPeerID = mesh.myPeerID
-        } catch (_: Exception) { }
-
         // Note: Mesh service is now started by MainActivity
 
         // BLE receives are inserted by MessageHandler path; no VoiceNoteBus for Tor in this branch.
@@ -1007,18 +1001,12 @@ class ChatViewModel(
                         getApplication(),
                         mesh
                     )
-                    val route = router.sendPrivate(
+                    router.sendPrivate(
                         messageContent,
                         peerID,
                         recipientNicknameParam,
                         messageId
                     )
-                    if (route == com.bitchat.android.services.MessageRouter.RouteResult.NOSTR) {
-                        messageManager.updateMessageDeliveryStatus(
-                            messageId,
-                            com.bitchat.android.model.DeliveryStatus.Sent
-                        )
-                    }
                 }
                 onAccepted(accepted)
             }
@@ -1111,12 +1099,7 @@ class ChatViewModel(
                     nickname = nickname,
                     isFavorite = isNowFavorite
                 )
-
-                try {
-                    com.bitchat.android.services.MessageRouter
-                        .getInstance(getApplication(), mesh)
-                        .sendFavoriteNotification(peerID, isNowFavorite)
-                } catch (_: Exception) { }
+                // Favorites are a severed bitchat concept: no notification is sent to the peer.
             }
         } catch (_: Exception) { }
 
@@ -1216,6 +1199,8 @@ class ChatViewModel(
                 com.bitchat.android.services.MessageRouter
                     .getInstance(getApplication(), mesh)
                     .onSessionEstablished(peerID)
+                // Deliver read receipts owed from when the link was down.
+                privateChatManager.flushPendingReadReceipts(peerID, mesh)
             }
         }
         // Update fingerprint mappings from centralized manager

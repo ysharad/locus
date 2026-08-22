@@ -1,11 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Locus icon set - 20dp grid, 1.25 stroke, round caps and joins.
+     Artwork from the Locus design system (replaces the old Figma export). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="20dp"
     android:height="20dp"
     android:viewportWidth="20"
     android:viewportHeight="20">
-    <group android:translateX="-16" android:translateY="-378">
-        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M25.375,386.125C26.0654,386.125 26.625,385.565 26.625,384.875C26.625,384.185 26.0654,383.625 25.375,383.625C24.6846,383.625 24.125,384.185 24.125,384.875C24.125,385.565 24.6846,386.125 25.375,386.125Z"/>
-        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.25" android:strokeLineCap="round" android:pathData="M25.375,397.375V386.125M21.625,397.375H29.125"/>
-        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28.9102,388.41C29.8475,387.472 30.3741,386.201 30.3741,384.875C30.3741,383.549 29.8475,382.278 28.9102,381.34M31.5625,391.062C32.3751,390.25 33.0197,389.285 33.4595,388.224C33.8993,387.162 34.1256,386.024 34.1256,384.875C34.1256,383.726 33.8993,382.588 33.4595,381.526C33.0197,380.465 32.3751,379.5 31.5625,378.688M21.8399,388.41C20.9026,387.472 20.376,386.201 20.376,384.875C20.376,383.549 20.9026,382.278 21.8399,381.34M19.1876,391.062C18.375,390.25 17.7304,389.285 17.2907,388.224C16.8509,387.162 16.6245,386.024 16.6245,384.875C16.6245,383.726 16.8509,382.588 17.2907,381.526C17.7304,380.465 18.375,379.5 19.1876,378.688"/>
-    </group>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M8.5 5.6A1.5 1.5 0 1 0 11.5 5.6A1.5 1.5 0 1 0 8.5 5.6Z"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M10 7.6V17.4"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M6.6 17.4H13.4"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M12.6 3.4L14.6 5.6L12.6 7.8"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M15.2 1.9L17.9 5.6L15.2 9.3"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M7.4 3.4L5.4 5.6L7.4 7.8"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.25" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M4.8 1.9L2.1 5.6L4.8 9.3"/>
 </vector>

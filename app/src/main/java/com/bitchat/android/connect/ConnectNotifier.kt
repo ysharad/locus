@@ -198,6 +198,35 @@ object ConnectNotifier {
 
     private fun childId(peerID: String): Int = CHILD_ID_BASE + (peerID.hashCode() and 0xFFFF)
 
+        // Wake-the-room: a peer asked sleeping phones at the venue to light up. Once per
+    // 10 minutes at most, never while the app is on screen, and it respects the same
+    // room-activity gate as every other venue notification.
+    @Volatile private var lastRoomWakeAt = 0L
+    fun roomWake(context: Context) {
+        val now = System.currentTimeMillis()
+        if (now - lastRoomWakeAt < 10 * 60_000L) return
+        if (appVisible()) return
+        if (!ConnectManager.roomActivityAllowed()) return
+        lastRoomWakeAt = now
+        try {
+            val intent = android.content.Intent(context, com.bitchat.android.MainActivity::class.java)
+            val pi = android.app.PendingIntent.getActivity(
+                context, 77, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val n = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Someone's looking for people at your venue")
+                .setContentText("Open Locus to appear in the room.")
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+            androidx.core.app.NotificationManagerCompat.from(context).notify(770077, n)
+        } catch (e: Exception) {
+            Log.i(TAG, "room wake notification failed: ${e.message}")
+        }
+    }
+
     private fun appVisible(): Boolean = try {
         ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
     } catch (_: Exception) {

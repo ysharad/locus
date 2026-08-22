@@ -85,6 +85,21 @@ internal val AvatarWell = Color(0xFF22302A)
 /** Copper-tint fill for the selected chip / card / tray. */
 internal val CopperTint = Color(0xFF1E1710)
 
+/** Locus+ mark. The one gold in the app — it means "a perk", nothing else. */
+internal val LocusGold = Color(0xFFE8B341)
+
+/** Glyph tints a profile can choose. Copper first = the system default. */
+internal val GlyphColors = listOf(
+    Color(0xFFCF7A45), // copper
+    Color(0xFF63C39D), // jade
+    Color(0xFFE8B341), // gold
+    Color(0xFFDB5B4A), // rust
+    Color(0xFF7FA8D9), // ice
+    Color(0xFFB98BD9), // orchid
+    Color(0xFFEDE7DA), // bone
+    Color(0xFF8A958C), // slate
+)
+
 // Back-compat aliases for call sites still naming the old palette. Signal == the action
 // colour (copper), the match strobe is also copper, the "secondary" accent is jade.
 internal val Signal = Copper

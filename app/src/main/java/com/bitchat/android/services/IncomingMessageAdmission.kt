@@ -27,6 +27,10 @@ internal object IncomingMessageAdmission {
             message.isPrivate -> {
                 val peerID = message.senderPeerID?.takeIf(String::isNotBlank)
                     ?: return false
+                // Their message arrived — stop showing them as "typing" right away.
+                if (message.sender != "system") {
+                    com.bitchat.android.connect.ConnectManager.clearTypingFrom(peerID)
+                }
                 // Mesh transport callbacks run on their background service workers. Wait for the
                 // serialized SQLite transaction so a notification can never advertise a message
                 // that an immediate process death would lose.

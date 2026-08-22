@@ -76,11 +76,9 @@ object RewardedAds {
             return
         }
         ad = null // consume; a replacement is loaded on dismissal
-        var earned = false
         current.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 preload(activity)
-                if (earned) onReward()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
@@ -89,6 +87,8 @@ object RewardedAds {
                 onUnavailable()
             }
         }
-        current.show(activity) { earned = true }
+        // Reward at EARN time, not dismissal: a creative with a broken close button (seen with
+        // Google's test unit) must never be able to eat a reward the user already earned.
+        current.show(activity) { onReward() }
     }
 }

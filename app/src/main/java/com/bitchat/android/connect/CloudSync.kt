@@ -58,6 +58,9 @@ object CloudSync {
                 "bio" to profile.bio,
                 "vibes" to profile.vibes,
                 "hereTo" to profile.hereTo,
+                "createdAt" to profile.createdAt,
+                // NOTE: `verified` is deliberately NOT written here — firestore.rules deny any
+                // client write touching it; only the claimVerified Cloud Function sets it.
                 "updatedAt" to FieldValue.serverTimestamp(),
                 "lastSeenAt" to lastSeen
             )

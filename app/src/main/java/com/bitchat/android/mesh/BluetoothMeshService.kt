@@ -1119,17 +1119,7 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
      */
     fun sendReadReceipt(messageID: String, recipientPeerID: String, readerNickname: String) {
         serviceScope.launch {
-            // Route geohash read receipts via MessageRouter instead of here
-            val geo = runCatching { com.bitchat.android.services.MessageRouter.tryGetInstance() }.getOrNull()
-            val isGeoAlias = try {
-                val map = com.bitchat.android.nostr.GeohashAliasRegistry.snapshot()
-                map.containsKey(recipientPeerID)
-            } catch (_: Exception) { false }
-            if (isGeoAlias && geo != null) {
-                geo.sendReadReceipt(com.bitchat.android.model.ReadReceipt(messageID), recipientPeerID)
-                return@launch
-            }
-
+            // (Geohash aliases used to detour via the Nostr router here; that path is severed.)
             try {
                 // Create read receipt payload using NoisePayloadType exactly like iOS
                 val readReceiptPayload = com.bitchat.android.model.NoisePayload(

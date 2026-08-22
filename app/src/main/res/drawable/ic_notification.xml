@@ -1,22 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:viewportWidth="120"
+    android:viewportHeight="120"
     android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <!-- Simple chat bubble icon for notifications -->
+    android:height="24dp">
+    <!-- The Locus contour mark (one irregular ring + origin dot), alpha-only for the status
+         bar. Heavier stroke than the launcher monochrome — at 24dp the 5-unit line vanishes. -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M4,4h16c1.1,0 2,0.9 2,2v10c0,1.1 -0.9,2 -2,2H6l-4,4V6C2,4.9 2.9,4 4,4z" />
-    <!-- Terminal cursor -->
+        android:pathData="M95.8,60.0C95.3,65.5 92.7,71.4 89.4,75.6C86.1,79.9 80.8,82.8 75.9,85.4C71.0,87.9 65.6,90.5 60.0,90.9C54.4,91.3 47.2,90.5 42.6,87.8C37.9,85.1 35.2,79.4 32.2,74.8C29.1,70.1 24.7,65.2 24.2,60.0C23.6,54.8 25.8,48.1 28.9,43.5C32.0,38.9 37.6,34.6 42.8,32.6C48.0,30.6 54.5,31.2 60.0,31.7C65.5,32.1 70.2,33.2 75.6,35.1C81.1,36.9 89.2,38.5 92.6,42.7C95.9,46.8 96.3,54.5 95.8,60.0Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8"
+        android:fillColor="#00000000" />
     <path
-        android:fillColor="@android:color/black"
-        android:pathData="M8,9h2v2h-2z" />
-    <!-- Message lines -->
-    <path
-        android:fillColor="@android:color/black"
-        android:pathData="M12,9h6v1h-6z" />
-    <path
-        android:fillColor="@android:color/black"
-        android:pathData="M12,11h4v1h-4z" />
+        android:pathData="M50,60 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0Z"
+        android:fillColor="#FFFFFF" />
 </vector>

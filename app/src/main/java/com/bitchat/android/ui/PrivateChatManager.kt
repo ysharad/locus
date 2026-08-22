@@ -470,6 +470,33 @@ class PrivateChatManager(
         return true
     }
 
+    // Read receipts that couldn't go out because the Noise session was down when the user
+    // read the chat. Keyed by canonical conversation id; flushed when the session comes up.
+    private val pendingReadReceipts = java.util.concurrent.ConcurrentHashMap<String, MutableSet<String>>()
+
+    /**
+     * The peer's session just came (back) up: deliver any read receipts we owe them for
+     * messages the user already read while the link was down.
+     */
+    fun flushPendingReadReceipts(peerID: String, meshService: MeshService) {
+        val conversationID = ContactDirectory.canonicalConversationId(peerID)
+        val pending = pendingReadReceipts.remove(conversationID) ?: return
+        if (pending.isEmpty()) return
+        val myNickname = state.getNicknameValue() ?: "unknown"
+        var sent = 0
+        pending.forEach { id ->
+            if (!hasReadReceiptBeenSent(id)) {
+                try {
+                    meshService.sendReadReceipt(id, peerID, myNickname)
+                    sent += 1
+                } catch (_: Exception) {
+                    pendingReadReceipts.getOrPut(conversationID) { mutableSetOf() }.add(id)
+                }
+            }
+        }
+        if (sent > 0) Log.d(TAG, "Flushed $sent pending read receipts to $peerID")
+    }
+
     /**
      * Send read receipts for all unread messages from a specific peer
      * Called when the user focuses on a private chat
@@ -515,8 +542,13 @@ class PrivateChatManager(
                     if (hasMesh) {
                         meshService.sendReadReceipt(msg.id, meshPeerID, myNickname)
                         sentCount += 1
+                    } else {
+                        // Session down at the moment of reading — queue instead of dropping,
+                        // or whether the sender ever sees "read" is radio luck at open time.
+                        pendingReadReceipts.getOrPut(canonicalConversationID) { mutableSetOf() }.add(msg.id)
                     }
                 } catch (e: Exception) {
+                    pendingReadReceipts.getOrPut(canonicalConversationID) { mutableSetOf() }.add(msg.id)
                     Log.w(TAG, "Failed to send read receipt for message ${msg.id}: ${e.message}")
                 }
             }

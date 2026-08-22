@@ -426,14 +426,14 @@ fun ForceDirectedMeshGraph(
                 // Pulse glow
                 if (pulse > 0.05f) {
                      drawCircle(
-                        color = Color(0xFF00FF00).copy(alpha = pulse * 0.6f),
+                        color = Color(0xFF63C39D).copy(alpha = pulse * 0.6f),
                         radius = 16f + (pulse * 20f),
                         center = center
                     )
                 }
 
                 drawCircle(
-                    color = Color(0xFF00C851),
+                    color = Color(0xFF63C39D),
                     radius = 16f + (pulse * 4f), // Slight scale up
                     center = center
                 )

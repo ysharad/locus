@@ -122,7 +122,7 @@ fun YouScreen(myPeerID: String, onEdit: () -> Unit, onInvite: () -> Unit, onKeep
             Text("→", style = BodyStyle.copy(fontSize = 16.sp), color = Copper)
         }
         RowDivider()
-        NavRow("Edit your card", onEdit)
+        NavRow("Edit your profile", onEdit)
         RowDivider()
         NavRow("Invite people nearby", onInvite)
         RowDivider()

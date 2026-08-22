@@ -92,7 +92,7 @@
   <string name="notification_summary_more">ועוד %1$d</string>
   <string name="notification_messages_from_people">%1$d הודעות מ-%2$d אנשים</string>
   <string name="notification_more_conversations">ועוד %1$d שיחות</string>
-  <string name="notification_active_peers_title">👥 יש בצ׳אטרים בקרבת מקום!</string>
+  <string name="notification_active_peers_title">People nearby</string>
   <string name="notification_active_peers_one">אדם אחד בסביבה</string>
   <string name="notification_active_peers_many">%1$d אנשים בסביבה</string>
   <string name="notification_new_messages">הודעות חדשות</string>

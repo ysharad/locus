@@ -37,8 +37,12 @@ data class BitchatPalette(
     val textTertiary: Color,
     /** Self, mentions targeting you, unread DMs. */
     val accentOrange: Color,
-    /** Nostr reachability. */
+    /** Legacy slot (was Nostr reachability) — now a quiet slate. */
     val accentPurple: Color,
+    /** Live-signal / sound-state: verified, in range, delivered in the room. */
+    val accentJade: Color,
+    /** Destructive / failed: block, report, a handshake that did not hold. */
+    val accentRust: Color,
 
     // MARK: - Deterministic peer colors
     /**
@@ -49,16 +53,18 @@ data class BitchatPalette(
 )
 
 val DarkBitchatPalette = BitchatPalette(
-    inputOutline = Color(0xFF352B48),
-    inputOutlineFocused = Color(0xFF5C4E7A),
-    inputSurface = Color(0xFF110B1A),
-    inputSurfaceFocused = Color(0xFF1A1226),
-    inputButton = Color(0xFF241A36),
+    inputOutline = Color(0xFF26302B),
+    inputOutlineFocused = Color(0xFFCF7A45),
+    inputSurface = Color(0xFF101612),
+    inputSurfaceFocused = Color(0xFF16201A),
+    inputButton = Color(0xFF1E2823),
     textTertiary = Color(0xFF8A958C),
     // Copper — the app's one accent (self bubbles, mentions, unread). Was amber; the Locus
     // system has no amber, so this lines the chat up with the rest of the app.
     accentOrange = Color(0xFFCF7A45),
-    accentPurple = Color(0xFF9D8BFF),
+    accentPurple = Color(0xFF8A958C),
+    accentJade = Color(0xFF63C39D),
+    accentRust = Color(0xFFDB5B4A),
     peerColors = PeerColorStyle.Dark,
 )
 
@@ -70,7 +76,9 @@ val LightBitchatPalette = BitchatPalette(
     inputButton = Color(0xFFE8E8E8),
     textTertiary = Color(0xFF6B756E),
     accentOrange = Color(0xFF9C4E23),
-    accentPurple = Color(0xFF6C5CE0),
+    accentPurple = Color(0xFF6B756E),
+    accentJade = Color(0xFF146B4F),
+    accentRust = Color(0xFFA63B2E),
     peerColors = PeerColorStyle.Light,
 )
 

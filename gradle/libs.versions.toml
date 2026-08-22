@@ -124,6 +124,9 @@ google-tink-android = { module = "com.google.crypto.tink:tink-android", version.
 # JSON
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "play-services-ads" }
+play-review = { module = "com.google.android.play:review", version = "2.0.2" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version = "21.2.0" }
+play-services-auth-api-phone = { module = "com.google.android.gms:play-services-auth-api-phone", version = "18.0.2" }
 user-messaging-platform = { module = "com.google.android.ump:user-messaging-platform", version.ref = "ump" }
 prebid-mobile-sdk = { module = "org.prebid:prebid-mobile-sdk", version.ref = "prebid" }
 

@@ -73,7 +73,8 @@ internal fun EmojiAvatar(
     emoji: String,
     size: Int,
     modifier: Modifier = Modifier,
-    ring: Color = Copper
+    ring: Color = Copper,
+    glyphTint: Color? = null
 ) {
     // A per-person seed so each medallion's contour wobbles a little differently.
     val seed = remember(emoji) { (emoji.hashCode() % 100) / 12f + 0.6f }
@@ -96,7 +97,7 @@ internal fun EmojiAvatar(
             Text(
                 emoji,
                 fontSize = (size * 0.38f).sp,
-                color = MaterialTheme.colorScheme.onSurface
+                color = glyphTint ?: MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -142,6 +143,27 @@ internal fun VibeChips(vibes: List<String>, modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+}
+
+/**
+ * Trust chip on a card: jade "✓ VERIFIED" once the identity is anchored to a signed-in
+ * account, slate "NEW" while the identity is young or unknown. Nothing for the settled
+ * middle — absence of a warning is the badge most people wear.
+ */
+@Composable
+internal fun TrustBadge(profile: ConnectProfile, modifier: Modifier = Modifier) {
+    val (label, tone) = when {
+        profile.verified -> "✓ VERIFIED" to Jade
+        profile.isNew() -> "NEW" to Slate
+        else -> return
+    }
+    Box(
+        modifier
+            .border(1.dp, tone.copy(alpha = 0.55f), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(label, style = EyebrowStyle.copy(fontSize = 10.sp, letterSpacing = 0.12.em), color = tone)
     }
 }
 
@@ -198,7 +220,7 @@ internal fun ProfileCardFace(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                EmojiAvatar(profile.emoji, size = 104)
+                EmojiAvatar(profile.emoji, size = 104, glyphTint = profile.glyphTintOrNull())
                 Spacer(Modifier.height(22.dp))
                 Text(
                     profile.name + (profile.age?.let { ", $it" } ?: ""),
@@ -207,6 +229,7 @@ internal fun ProfileCardFace(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                TrustBadge(profile, Modifier.padding(top = 8.dp))
                 if (profile.hereTo.isNotBlank()) {
                     Spacer(Modifier.height(12.dp))
                     Text(

@@ -45,8 +45,11 @@ object ConnectManager {
 
     // Typing: at most one ping every few seconds while composing; the receiver shows "typing" and
     // clears it if no ping arrives within the TTL (so we never need a reliable "stopped" packet).
-    private const val TYPING_THROTTLE_MS = 3_000L
-    private const val TYPING_TTL_MS = 6_000L
+    // Throttle well under the TTL: with 3s/6s a thinking-pause plus BLE delivery jitter
+    // routinely outlived the expiry, so the indicator flickered off mid-typing.
+    private const val TYPING_THROTTLE_MS = 2_500L
+    private const val TYPING_TTL_MS = 10_000L
+    private const val UNVERIFIED_LIKES_PER_DAY = 25L
 
     private var store: ConnectStore? = null
     private var appContext: Context? = null
@@ -95,6 +98,16 @@ object ConnectManager {
     /** Locus+ : timestamp until which "see who likes you" is unlocked (persisted across restarts). */
     private val _revealUntil = MutableStateFlow(0L)
     val revealUntil: StateFlow<Long> = _revealUntil.asStateFlow()
+
+    /** Likers revealed forever (per-batch model — one ad unblurs the current wave, permanently). */
+    private val _revealedLikes = MutableStateFlow<Set<String>>(emptySet())
+    val revealedLikes: StateFlow<Set<String>> = _revealedLikes.asStateFlow()
+
+    fun revealLikers(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        store?.addRevealedLikes(ids)
+        synchronized(lock) { _revealedLikes.value = _revealedLikes.value + ids }
+    }
 
     /** Locus+ : timestamp until which the "boosted" chip shows after a Boost (in-memory, momentary). */
     private val _boostUntil = MutableStateFlow(0L)
@@ -191,6 +204,7 @@ object ConnectManager {
         _matches.value = s.loadMatches()
         _blocked.value = s.blockedPeers()
         _ageConfirmed.value = s.isAgeConfirmed()
+        _revealedLikes.value = s.revealedLikes()
         _identitySeen.value = s.isIdentitySeen()
         _keepChats.value = s.isKeepChats()
         _visible.value = s.isVisible()
@@ -406,6 +420,9 @@ object ConnectManager {
             if (ConnectSignal.isTyping(content) && message.isPrivate) {
                 onTypingReceived(peerID)
             }
+            if (ConnectSignal.isWakeRoom(content) && !message.isPrivate) {
+                appContext?.let { ConnectNotifier.roomWake(it) }
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to handle connect signal: ${e.message}")
         }
@@ -453,15 +470,94 @@ object ConnectManager {
 
     fun saveProfile(profile: ConnectProfile) {
         val s = store ?: return
-        val stamped = profile.copy(updatedAt = System.currentTimeMillis())
+        val prev = _myProfile.value
+        // createdAt is the identity's birth (set once, survives edits); verified is carried,
+        // never set here — only markVerified() flips it, after the server accepts the claim.
+        val stamped = profile.copy(
+            updatedAt = System.currentTimeMillis(),
+            createdAt = prev?.createdAt?.takeIf { it > 0L } ?: System.currentTimeMillis(),
+            verified = prev?.verified == true
+        )
         s.saveMyProfile(stamped)
         _myProfile.value = stamped
+        broadcastProfile(force = true)
+        CloudSync.syncProfile(stamped)
+        // A login can precede the card (first-run order is identity → card). Once the profile
+        // has had a moment to sync, land any badge claim that was waiting on it.
+        scope?.launch {
+            kotlinx.coroutines.delay(5_000)
+            try { GoogleAnchor.retryClaimIfNeeded() } catch (_: Exception) { }
+        }
+    }
+
+    /** Logout: the badge belongs to the account, not the device — take it off the card. */
+    fun demoteVerified() {
+        val p = _myProfile.value ?: return
+        if (!p.verified) return
+        val stamped = p.copy(verified = false, updatedAt = System.currentTimeMillis())
+        store?.saveMyProfile(stamped)
+        _myProfile.value = stamped
+        lastBroadcastAt = 0L
+        broadcastProfile(force = true)
+    }
+
+    /**
+     * Wake the room: one public BLE packet that asks in-range phones with Locus dozing in the
+     * background to say "someone's looking for people here". Rate-limited to once per
+     * 10 minutes so it can never become a spam lever. Returns false when still cooling down.
+     */
+    fun wakeRoom(): Boolean {
+        val s = store ?: return false
+        val now = System.currentTimeMillis()
+        if (now - s.long("wake_sent_at", 0L) < 10 * 60_000L) return false
+        val m = mesh ?: return false
+        return try {
+            m.sendMessage(ConnectSignal.encodeWakeRoom())
+            s.setLong("wake_sent_at", now)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** The server accepted our verification claim: reflect it locally and re-air the card. */
+    fun markVerified() {
+        val p = _myProfile.value ?: return
+        if (p.verified) return
+        val stamped = p.copy(verified = true, updatedAt = System.currentTimeMillis())
+        store?.saveMyProfile(stamped)
+        _myProfile.value = stamped
+        lastBroadcastAt = 0L
         broadcastProfile(force = true)
         CloudSync.syncProfile(stamped)
     }
 
     fun like(peerID: String) = synchronized(lock) {
         val s = store ?: return
+        // Idempotent: one ⚡ per person. Re-taps neither re-send nor eat the daily budget.
+        if (peerID in _liked.value) return
+        // Unverified identities get a daily like budget. This is the economics of abuse:
+        // a throwaway profile that can only ⚡ a couple dozen people a day isn't worth
+        // creating, while a verified (Google-anchored) identity is unlimited — and bannable.
+        if (!peerID.startsWith(DEMO_PREFIX) && _myProfile.value?.verified != true) {
+            val today = System.currentTimeMillis() / 86_400_000L
+            val sameDay = s.long("likes_day", 0L) == today
+            val count = if (sameDay) s.long("likes_count", 0L) else 0L
+            if (count >= UNVERIFIED_LIKES_PER_DAY) {
+                appContext?.let { ctx ->
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(
+                            ctx,
+                            "Daily connect limit reached — sign in to verify and keep going.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                return
+            }
+            s.setLong("likes_day", today)
+            s.setLong("likes_count", count + 1)
+        }
         if (!peerID.startsWith(DEMO_PREFIX)) s.addLiked(peerID)
         _liked.value = _liked.value + peerID
         if (peerID.startsWith(DEMO_PREFIX)) {
@@ -626,6 +722,21 @@ object ConnectManager {
         }
     }
 
+    /**
+     * A real message from this peer just landed: whatever they were typing, it's sent.
+     * Clearing immediately (with a token bump so a stale expiry can't fight a fresh ping)
+     * stops the indicator lingering next to the delivered bubble.
+     */
+    fun clearTypingFrom(senderPeerID: String?) {
+        senderPeerID ?: return
+        synchronized(lock) {
+            if (senderPeerID in _typingFrom.value) {
+                typingToken[senderPeerID] = (typingToken[senderPeerID] ?: 0) + 1
+                _typingFrom.value = _typingFrom.value - senderPeerID
+            }
+        }
+    }
+
     // MARK: - Settings gates consulted by the inherited mesh/notification paths, so the Locus
     // privacy + notification toggles actually govern read receipts, last-seen, and every
     // notification — not just the Locus-specific code paths.
@@ -737,10 +848,10 @@ object ConnectManager {
     fun seedDemoProfiles() = synchronized(lock) {
         val now = System.currentTimeMillis()
         val demos = listOf(
-            ConnectProfile("${DEMO_PREFIX}nova", "Nova", 25, "🝊", "resident of the front row", listOf("music", "dancing", "night owl"), "see where the night goes", now),
-            ConnectProfile("${DEMO_PREFIX}kai", "Kai", 27, "◈", "will trade setlist predictions for snacks", listOf("music", "foodie", "deep talks"), "find my crew", now),
-            ConnectProfile("${DEMO_PREFIX}juno", "Juno", 23, "❍", "first time here, adopt me", listOf("artsy", "chill", "traveler"), "meet new people", now),
-            ConnectProfile("${DEMO_PREFIX}rex", "Rex", 29, "☾", "shortest guy at the venue, easy to find", listOf("gamer", "sporty", "festival head"), "just vibing", now)
+            ConnectProfile(peerID = "${DEMO_PREFIX}nova", name = "Nova", age = 25, emoji = "🝊", bio = "resident of the front row", vibes = listOf("music", "dancing", "night owl"), hereTo = "see where the night goes", updatedAt = now),
+            ConnectProfile(peerID = "${DEMO_PREFIX}kai", name = "Kai", age = 27, emoji = "◈", bio = "will trade setlist predictions for snacks", vibes = listOf("music", "foodie", "deep talks"), hereTo = "find my crew", updatedAt = now),
+            ConnectProfile(peerID = "${DEMO_PREFIX}juno", name = "Juno", age = 23, emoji = "❍", bio = "first time here, adopt me", vibes = listOf("artsy", "chill", "traveler"), hereTo = "meet new people", updatedAt = now),
+            ConnectProfile(peerID = "${DEMO_PREFIX}rex", name = "Rex", age = 29, emoji = "☾", bio = "shortest guy at the venue, easy to find", vibes = listOf("gamer", "sporty", "festival head"), hereTo = "just vibing", updatedAt = now)
         )
         _nearby.value = _nearby.value + demos.associateBy { it.peerID }
         // Demo seeds go through the notifier too, so backgrounding the app right

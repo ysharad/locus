@@ -266,39 +266,9 @@ class NostrDirectMessageHandler(
 
             FavoritesPersistenceService.shared.updatePeerFavoritedUs(noiseKey, control.isFavorite)
             senderNpub?.let { FavoritesPersistenceService.shared.updateNostrPublicKey(noiseKey, it) }
-            val targetConversationID = ContactDirectory.canonicalConversationId(conversationID)
-
-            val relationship = FavoritesPersistenceService.shared.getFavoriteStatus(noiseKey)
-            val displayName = relationship
-                ?.peerNickname
-                ?.takeUnless { it.equals("Unknown", ignoreCase = true) }
-                ?: senderNickname
-            val guidance = if (control.isFavorite) {
-                if (relationship?.isFavorite == true) {
-                    " - mutual! You can continue DMs via Nostr when out of mesh."
-                } else {
-                    " - favorite back to continue DMs later."
-                }
-            } else {
-                ". DMs over Nostr will pause unless you both favorite again."
-            }
-            val action = if (control.isFavorite) "favorited" else "unfavorited"
-            val systemMessage = BitchatMessage(
-                sender = "system",
-                content = "$displayName $action you$guidance",
-                timestamp = timestamp,
-                isRelay = false,
-                isPrivate = true,
-                senderPeerID = targetConversationID
-            )
-
-            withContext(Dispatchers.Main) {
-                privateChatManager.handleIncomingPrivateMessageDurably(
-                    message = systemMessage,
-                    suppressUnread = true,
-                    origin = PrivateMessageOrigin.NOSTR
-                )
-            }
+            // State only — no injected chat notice; the upstream copy sold Nostr DM
+            // continuation, which is not the Locus out-of-mesh path.
+            true
         } catch (e: Exception) {
             Log.w(TAG, "Failed to handle Nostr favorite notification: ${e.message}")
             false

@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +35,7 @@ private const val INVITE_TEXT =
 fun InviteSheet(onBeam: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     BottomSheet(onDismiss = onDismiss) {
-        Text("Fill the room", style = TitleStyle.copy(fontSize = 24.sp), color = MaterialTheme.colorScheme.onSurface)
+        Text("Invite", style = TitleStyle.copy(fontSize = 24.sp), color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(18.dp))
         // Beam — the hero, copper outline + NO INTERNET band.
         InviteRow(
@@ -59,6 +60,26 @@ fun InviteSheet(onBeam: () -> Unit, onDismiss: () -> Unit) {
                 onDismiss()
             }
         )
+        // The room code — the one route that outlives the room: post it before the gig,
+        // print it at the door. Same place + hour derives the same code on every phone.
+        val roomCode = remember { com.bitchat.android.connect.RoomCode.current(context) }
+        if (roomCode != null) {
+            Spacer(Modifier.height(10.dp))
+            InviteRow(
+                label = "Room code  $roomCode",
+                trailing = { Text("SHARE", style = EyebrowStyle.copy(fontSize = 11.sp, letterSpacing = 0.1.em), color = Copper) },
+                border = MaterialTheme.colorScheme.outline,
+                bg = MaterialTheme.colorScheme.surfaceVariant,
+                onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "We're on Locus — room $roomCode. Get it: https://play.google.com/store/apps/details?id=com.goapps.locus")
+                    }
+                    context.startActivity(Intent.createChooser(send, "Share room code"))
+                    onDismiss()
+                }
+            )
+        }
         Spacer(Modifier.height(8.dp))
     }
 }

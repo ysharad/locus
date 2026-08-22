@@ -139,3 +139,32 @@ exports.relayNotify = onDocumentCreated(
     }
   }
 );
+
+// The ONE writer of profiles/{fp}.verified. Verification level 1 = the caller's auth session
+// genuinely carries a Google identity (checked in the token, not client-asserted) AND the
+// caller owns the fingerprint's profile doc. Firestore rules reject any client write that
+// touches `verified`, so this callable is the only path to the badge.
+exports.claimVerified = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const fp = String((request.data && request.data.fingerprint) || "");
+  if (!/^[0-9a-f]{64}$/i.test(fp)) throw new HttpsError("invalid-argument", "Bad fingerprint.");
+  const identities =
+    (request.auth.token && request.auth.token.firebase && request.auth.token.firebase.identities) || {};
+  const hasGoogle = Array.isArray(identities["google.com"]) && identities["google.com"].length > 0;
+  const hasPhone =
+    (Array.isArray(identities["phone"]) && identities["phone"].length > 0) ||
+    Boolean(request.auth.token && request.auth.token.phone_number);
+  if (!hasGoogle && !hasPhone) {
+    throw new HttpsError("failed-precondition", "This session has no Google account or phone number linked.");
+  }
+  const ref = admin.firestore().collection("profiles").doc(fp.toLowerCase());
+  const snap = await ref.get();
+  if (!snap.exists || snap.get("uid") !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "That profile isn't yours.");
+  }
+  await ref.set(
+    { verified: true, verifiedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+  return { verified: true };
+});

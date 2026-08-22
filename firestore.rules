@@ -7,13 +7,17 @@ service cloud.firestore {
       // Signed-in reads only (anonymous auth counts). Discovery is mesh-only; the sender needs a
       // profile read to fetch a recipient's chatPubKey. The push token is NOT here (see /tokens).
       allow read: if request.auth != null;
+      // `verified` is server-truth: only the claimVerified Cloud Function (admin SDK,
+      // bypasses rules) may ever write it. Any client write touching it is rejected.
       allow create: if request.auth != null
                     && request.resource.data.uid == request.auth.uid
                     && request.resource.data.name is string
-                    && request.resource.data.name.size() <= 32;
+                    && request.resource.data.name.size() <= 32
+                    && !request.resource.data.keys().hasAny(['verified', 'verifiedAt']);
       allow update: if request.auth != null
                     && resource.data.uid == request.auth.uid
-                    && request.resource.data.uid == request.auth.uid;
+                    && request.resource.data.uid == request.auth.uid
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified', 'verifiedAt']);
       allow delete: if request.auth != null
                     && resource.data.uid == request.auth.uid;
     }

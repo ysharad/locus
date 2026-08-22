@@ -82,41 +82,78 @@ internal fun BottomSheet(
 @Composable
 private fun noRippleSource() = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 
-/** "⚡ N for you" — the one place copper borders a container; it's meant to feel like an incentive. */
+/** "⚡ N for you" — blurred until one short video reveals the current wave, forever. */
 @Composable
-internal fun TraySheet(peerIDs: Set<String>, nearby: Map<String, ConnectProfile>, onDismiss: () -> Unit) {
+internal fun TraySheet(
+    peerIDs: Set<String>,
+    nearby: Map<String, ConnectProfile>,
+    revealed: Set<String>,
+    revealing: Boolean,
+    onReveal: () -> Unit,
+    onDismiss: () -> Unit
+) {
     BottomSheet(onDismiss = onDismiss, topBorder = Copper) {
         Text("⚡ ${peerIDs.size} FOR YOU", style = EyebrowStyle.copy(letterSpacing = 0.16.em), color = Copper)
         Spacer(Modifier.height(12.dp))
         Text("They swiped you first.", style = TitleStyle.copy(fontSize = 24.sp), color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Connect back and the chat opens instantly.",
-            style = BodyStyle.copy(fontSize = 14.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(20.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            peerIDs.take(3).forEachIndexed { i, id ->
-                val p = nearby[id]
-                val band = listOf("4 M AWAY", "12 M AWAY", "EDGE OF RANGE").getOrElse(i) { "IN RANGE" }
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(18.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { ConnectManagerLike(id); onDismiss() }
-                        .padding(vertical = 16.dp, horizontal = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    EmojiAvatar(p?.emoji ?: "❍", size = 52)
-                    Spacer(Modifier.height(10.dp))
-                    Text(p?.name ?: "Nearby", style = ListNameStyle.copy(fontSize = 15.sp), color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Spacer(Modifier.height(5.dp))
-                    Text(band, style = EyebrowStyle.copy(fontSize = 11.sp, letterSpacing = 0.08.em), color = if (i < 2) Jade else Slate)
+        Spacer(Modifier.height(16.dp))
+        val ordered = peerIDs.sortedByDescending { it in revealed }
+        ordered.take(6).forEach { id ->
+            val p = nearby[id]
+            val isRevealed = id in revealed
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, if (isRevealed) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(enabled = isRevealed) { ConnectManager.like(id); onDismiss() }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                EmojiAvatar(if (isRevealed) (p?.emoji ?: "❍") else "❍", size = 44)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (isRevealed) (p?.name ?: "Nearby") else "• • • • •",
+                        style = ListNameStyle.copy(fontSize = 16.sp),
+                        color = if (isRevealed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        if (isRevealed) (if (p != null) "in range" else "seen earlier") else "hidden",
+                        style = EyebrowStyle.copy(fontSize = 10.sp, letterSpacing = 0.08.em),
+                        color = if (isRevealed && p != null) Jade else Slate
+                    )
+                }
+                if (isRevealed) {
+                    Text("⚡ CONNECT", style = EyebrowStyle.copy(fontSize = 11.sp, letterSpacing = 0.08.em), color = Copper)
                 }
             }
+            Spacer(Modifier.height(8.dp))
+        }
+        val hiddenCount = peerIDs.count { it !in revealed }
+        if (hiddenCount > 0) {
+            Spacer(Modifier.height(6.dp))
+            Button(
+                onClick = onReveal,
+                enabled = !revealing,
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = Copper, contentColor = OnCopper),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            ) {
+                Text(
+                    if (revealing) "Loading…" else "Reveal — watch a short video",
+                    style = EyebrowStyle.copy(fontSize = 13.sp, letterSpacing = 0.1.em),
+                    color = OnCopper
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "One video reveals everyone here — forever. New admirers arrive hidden.",
+                style = BodyStyle.copy(fontSize = 12.sp),
+                color = Slate
+            )
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -166,14 +203,39 @@ internal fun RevealGateSheet(count: Int, watching: Boolean, onWatch: () -> Unit,
     }
 }
 
-/** A peer's card raised as a sheet — used from radar taps. Full deck anatomy + connect. */
+/**
+ * A peer's card raised as a sheet — used from radar taps. Full deck anatomy + connect, or — for
+ * someone you're already connected with — a straight line into the chat.
+ */
 @Composable
-internal fun PeerSheet(profile: ConnectProfile, onConnect: () -> Unit, onDismiss: () -> Unit) {
+internal fun PeerSheet(
+    profile: ConnectProfile,
+    onConnect: () -> Unit,
+    onDismiss: () -> Unit,
+    isConnection: Boolean = false,
+    alreadySent: Boolean = false,
+    onChat: () -> Unit = {}
+) {
+    // The ⚡ is silent on their side by design — so YOUR side must say what happened.
+    // A like already sent STAYS sent across reopenings; the sheet only excuses itself
+    // right after the tap, not when you reopen someone you liked earlier.
+    val sentState = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(alreadySent) }
+    val justSent = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(justSent.value) {
+        if (justSent.value) {
+            kotlinx.coroutines.delay(1600)
+            onDismiss()
+        }
+    }
     BottomSheet(onDismiss = onDismiss) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SignalBars(bars = 4)
             Spacer(Modifier.width(9.dp))
-            Text("ARM'S REACH", style = EyebrowStyle.copy(letterSpacing = 0.14.em), color = Jade)
+            Text(
+                if (isConnection) "CONNECTED · IN RANGE" else "ARM'S REACH",
+                style = EyebrowStyle.copy(letterSpacing = 0.14.em),
+                color = if (isConnection) Copper else Jade
+            )
         }
         Spacer(Modifier.height(20.dp))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -184,6 +246,7 @@ internal fun PeerSheet(profile: ConnectProfile, onConnect: () -> Unit, onDismiss
                 style = CardNameStyle.copy(fontSize = 29.sp),
                 color = MaterialTheme.colorScheme.onSurface
             )
+            TrustBadge(profile, Modifier.padding(top = 8.dp))
             if (profile.hereTo.isNotBlank()) {
                 Spacer(Modifier.height(10.dp))
                 Text("HERE TO ${profile.hereTo}".uppercase(), style = EyebrowStyle.copy(letterSpacing = 0.14.em), color = Copper)
@@ -208,12 +271,30 @@ internal fun PeerSheet(profile: ConnectProfile, onConnect: () -> Unit, onDismiss
                 contentAlignment = Alignment.Center
             ) { Text("✕", fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Button(
-                onClick = onConnect,
+                onClick = {
+                    when {
+                        isConnection -> onChat()
+                        !sentState.value -> { onConnect(); sentState.value = true; justSent.value = true }
+                    }
+                },
                 modifier = Modifier.weight(1f).height(60.dp),
                 shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Copper, contentColor = OnCopper)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (sentState.value) Jade else Copper,
+                    contentColor = if (sentState.value) androidx.compose.ui.graphics.Color(0xFF0C1210) else OnCopper
+                )
             ) {
-                Text("⚡  Connect", style = BodyStyle.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold))
+                Text(
+                    when {
+                        isConnection -> "✶  Chat"
+                        sentState.value && !justSent.value -> "✓  Sent — waiting on them"
+                        sentState.value -> "✓  Sent — if they tap ⚡ too, it's a match"
+                        // Deliberately NOT hinting that this person already liked you: that is
+                        // exactly what the ⚡ tray sells. The match simply happens when you tap.
+                        else -> "⚡  Connect"
+                    },
+                    style = BodyStyle.copy(fontSize = if (sentState.value) 14.sp else 17.sp, fontWeight = FontWeight.SemiBold)
+                )
             }
         }
         Spacer(Modifier.height(8.dp))

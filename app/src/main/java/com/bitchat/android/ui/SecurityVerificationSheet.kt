@@ -193,10 +193,10 @@ private fun buildStatusInfo(
         else -> Icons.Outlined.NoEncryption
     }
     val tint = when {
-        isVerified -> Color(0xFF32D74B)
-        sessionState == "failed" -> Color(0xFFFF3B30)
-        sessionState == "handshaking" -> Color(0xFFFF9500)
-        sessionState == "established" -> Color(0xFF32D74B)
+        isVerified -> Color(0xFF63C39D)
+        sessionState == "failed" -> Color(0xFFDB5B4A)
+        sessionState == "handshaking" -> Color(0xFFCF7A45)
+        sessionState == "established" -> Color(0xFF63C39D)
         else -> accent.copy(alpha = 0.6f)
     }
     return SecurityStatusInfo(text, icon, tint)
@@ -273,9 +273,9 @@ private fun SecurityVerificationActions(
     if (isVerified) {
         VerificationStatusRow(
             icon = Icons.Filled.Verified,
-            iconTint = Color(0xFF32D74B),
+            iconTint = Color(0xFF63C39D),
             text = stringResource(R.string.fingerprint_verified_label),
-            textTint = Color(0xFF32D74B)
+            textTint = Color(0xFF63C39D)
         )
         Text(
             text = stringResource(R.string.fingerprint_verified_message),
@@ -289,7 +289,7 @@ private fun SecurityVerificationActions(
         Button(
             onClick = { fingerprint?.let(onUnverify) },
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFF3B30),
+                containerColor = Color(0xFFDB5B4A),
                 contentColor = Color.White
             ),
             modifier = Modifier.fillMaxWidth()
@@ -303,9 +303,9 @@ private fun SecurityVerificationActions(
     } else {
         VerificationStatusRow(
             icon = Icons.Filled.Warning,
-            iconTint = Color(0xFFFF9500),
+            iconTint = Color(0xFFCF7A45),
             text = stringResource(R.string.fingerprint_not_verified_label),
-            textTint = Color(0xFFFF9500)
+            textTint = Color(0xFFCF7A45)
         )
         Text(
             text = stringResource(R.string.fingerprint_not_verified_message_fmt, displayName),
@@ -425,7 +425,7 @@ private fun FingerprintBlock(
             Text(
                 text = stringResource(R.string.fingerprint_pending),
                 style = MaterialTheme.typography.bodyMedium.copy(fontFamily = BitchatFontFamily),
-                color = Color(0xFFFF9500),
+                color = Color(0xFFCF7A45),
                 modifier = Modifier.padding(16.dp)
             )
         }

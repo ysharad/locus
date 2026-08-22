@@ -118,16 +118,18 @@ fun FileMessageItem(
  */
 @Composable
 private fun FileTypeBadge(mimeType: String) {
-    val (text, color) = when {
-        mimeType.startsWith("application/pdf") -> "PDF" to Color(0xFFDC2626)
-        mimeType.startsWith("text/") -> "TXT" to Color(0xFF059669)
-        mimeType.startsWith("image/") -> "IMG" to Color(0xFF7C3AED)
-        mimeType.startsWith("audio/") -> "AUD" to Color(0xFFEA580C)
-        mimeType.startsWith("video/") -> "VID" to Color(0xFF2563EB)
-        mimeType.contains("document") -> "DOC" to Color(0xFF1D4ED8)
-        mimeType.contains("zip") || mimeType.contains("rar") -> "ZIP" to Color(0xFF7C2D12)
-        else -> "FILE" to MaterialTheme.colorScheme.onSurfaceVariant
+    // A file's type is a fact, not a rainbow: mono label, one quiet colour for all.
+    val text = when {
+        mimeType.startsWith("application/pdf") -> "PDF"
+        mimeType.startsWith("text/") -> "TXT"
+        mimeType.startsWith("image/") -> "IMG"
+        mimeType.startsWith("audio/") -> "AUD"
+        mimeType.startsWith("video/") -> "VID"
+        mimeType.contains("document") -> "DOC"
+        mimeType.contains("zip") || mimeType.contains("rar") -> "ZIP"
+        else -> "FILE"
     }
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
 
     Text(
         text = text,
@@ -141,17 +143,6 @@ private fun FileTypeBadge(mimeType: String) {
  * Get appropriate icon color based on file extension
  */
 private fun getFileIconColor(fileName: String): Color {
-    val extension = fileName.substringAfterLast(".", "").lowercase()
-    return when (extension) {
-        "pdf" -> Color(0xFFDC2626) // Red
-        "doc", "docx" -> Color(0xFF1D4ED8) // Blue
-        "xls", "xlsx" -> Color(0xFF059669) // Green
-        "ppt", "pptx" -> Color(0xFFEA580C) // Orange
-        "txt", "json", "xml" -> Color(0xFF7C3AED) // Purple
-        "jpg", "png", "gif", "webp" -> Color(0xFF2563EB) // Blue
-        "mp3", "wav", "m4a" -> Color(0xFFEA580C) // Orange
-        "mp4", "avi", "mov" -> Color(0xFFDC2626) // Red
-        "zip", "rar", "7z" -> Color(0xFF7C2D12) // Brown
-        else -> Color(0xFF6B7280) // Gray
-    }
+    // One accent for every attachment — copper, the app's single accent.
+    return Color(0xFFCF7A45)
 }

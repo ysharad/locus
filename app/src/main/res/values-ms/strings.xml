@@ -43,7 +43,7 @@
   <string name="notification_summary_more">dan %1$d lagi</string>
   <string name="notification_messages_from_people">%1$d mesej daripada %2$d orang</string>
   <string name="notification_more_conversations">dan %1$d perbualan lagi</string>
-  <string name="notification_active_peers_title">👥 Locuster berdekatan!</string>
+  <string name="notification_active_peers_title">People nearby</string>
   <string name="notification_active_peers_one">1 orang berdekatan</string>
   <string name="notification_active_peers_many">%1$d orang berdekatan</string>
   <string name="notification_new_messages">Mesej Baharu</string>

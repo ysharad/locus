@@ -44,12 +44,13 @@ internal val MENTION_TOKEN_REGEX = Regex("@([\\p{L}0-9_]+(?:#[a-fA-F0-9]{4})?)")
  * Get RSSI-based color for signal strength visualization
  */
 fun getRSSIColor(rssi: Int): Color {
+    // Three range bands in ONE accent — distance is opacity, never hue. Walking to the bar
+    // is not an error, so signal must never drift toward the block-and-report colour.
+    val jade = Color(0xFF63C39D)
     return when {
-        rssi >= -50 -> Color(0xFF00FF00) // Bright green
-        rssi >= -60 -> Color(0xFF80FF00) // Green-yellow
-        rssi >= -70 -> Color(0xFFFFFF00) // Yellow
-        rssi >= -80 -> Color(0xFFFF8000) // Orange
-        else -> Color(0xFFFF4444) // Red
+        rssi >= -60 -> jade                    // same room
+        rssi >= -78 -> jade.copy(alpha = 0.65f) // across the room
+        else -> jade.copy(alpha = 0.38f)        // edge of range
     }
 }
 

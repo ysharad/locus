@@ -79,7 +79,7 @@
     <string name="notification_summary_more">і ще %1$d</string>
     <string name="notification_messages_from_people">%1$d повідомлень від %2$d людей</string>
     <string name="notification_more_conversations">і ще %1$d розмов</string>
-    <string name="notification_active_peers_title">👥 Locus-користувачі поруч!</string>
+    <string name="notification_active_peers_title">People nearby</string>
     <string name="notification_active_peers_one">1 людина поруч</string>
     <string name="notification_active_peers_many">%1$d людей поруч</string>
     <string name="notification_new_messages">Нові повідомлення</string>
