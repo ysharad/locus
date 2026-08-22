@@ -156,7 +156,7 @@ private fun SettingsHub(
                         style = BodyStyle.copy(fontSize = 12.sp),
                         color = Copper,
                         modifier = Modifier.clickable {
-                            openUrl(context, "https://github.com/permissionlesstech/bitchat-android")
+                            openUrl(context, "https://github.com/ysharad/locus")
                         }
                     )
                 }
