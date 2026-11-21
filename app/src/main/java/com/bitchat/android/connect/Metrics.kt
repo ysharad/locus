@@ -27,6 +27,12 @@ object Metrics {
     /** A 1:1 chat was opened. */
     const val CHAT_OPENED = "chat_opened"
 
+    /** A bitchat device was nearby this session; param `peak` is a bucket ("1", "2-3", "4-9", "10+"). */
+    const val BITCHAT_NEARBY = "bitchat_nearby"
+
+    /** The mesh scan ran this session (denominator for [BITCHAT_NEARBY]). */
+    const val BITCHAT_SCAN_SESSION = "bitchat_scan_session"
+
     @Volatile private var analytics: FirebaseAnalytics? = null
 
     fun init(context: Context) {
