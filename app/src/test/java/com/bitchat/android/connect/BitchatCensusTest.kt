@@ -44,8 +44,20 @@ class BitchatCensusTest {
     fun `flush after markScanning only returns scanned with peak 0`() {
         val t = BitchatCensus.Tally()
         t.markScanning()
+        t.markScanStopped()
         assertEquals(BitchatCensus.Summary(scanned = true, peak = 0), t.flush(0))
         assertNull(t.flush(1))
+    }
+
+    @Test
+    fun `scan still running at flush counts the next session too`() {
+        val t = BitchatCensus.Tally()
+        t.markScanning()
+        assertNotNull(t.flush(0))
+        assertEquals(BitchatCensus.Summary(scanned = true, peak = 0), t.flush(1))
+        t.markScanStopped()
+        assertEquals(BitchatCensus.Summary(scanned = true, peak = 0), t.flush(2))
+        assertNull(t.flush(3))
     }
 
     @Test

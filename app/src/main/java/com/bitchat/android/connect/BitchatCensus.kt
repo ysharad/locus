@@ -20,6 +20,7 @@ object BitchatCensus {
         private val lastSeen = HashMap<String, Long>()
         private var peak = 0
         private var scanned = false
+        private var scanActive = false
 
         @Synchronized
         fun sighting(id: String, nowMs: Long) {
@@ -31,13 +32,21 @@ object BitchatCensus {
         @Synchronized
         fun markScanning() {
             scanned = true
+            scanActive = true
+        }
+
+        @Synchronized
+        fun markScanStopped() {
+            if (scanActive) scanned = true
+            scanActive = false
         }
 
         @Synchronized
         fun flush(nowMs: Long): Summary? {
             lastSeen.values.removeAll { nowMs - it > windowMs }
-            if (!scanned && peak == 0) return null
-            val summary = Summary(scanned = scanned, peak = peak)
+            val ran = scanned || scanActive
+            if (!ran && peak == 0) return null
+            val summary = Summary(scanned = ran, peak = peak)
             peak = 0
             scanned = false
             return summary
@@ -77,6 +86,8 @@ object BitchatCensus {
     fun sighting(id: String, nowMs: Long = System.currentTimeMillis()) = tally.sighting(id, nowMs)
 
     fun markScanning() = tally.markScanning()
+
+    fun markScanStopped() = tally.markScanStopped()
 
     fun flush(nowMs: Long = System.currentTimeMillis()): Summary? = tally.flush(nowMs)
 }

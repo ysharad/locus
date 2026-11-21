@@ -17,6 +17,7 @@ import java.util.*
 import kotlinx.coroutines.Job
 import com.bitchat.android.ui.debug.DebugSettingsManager
 import com.bitchat.android.ui.debug.DebugScanResult
+import com.bitchat.android.connect.BitchatCensus
 
 /**
  * Manages GATT client operations, scanning, and client-side connections
@@ -211,8 +212,12 @@ class BluetoothGattClientManager(
         val scanFilter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid(AppConstants.Mesh.Gatt.SERVICE_UUID))
             .build()
-        
-        val scanFilters = listOf(scanFilter)
+        // Counted only, never connected to: see BitchatCensus.
+        val bitchatFilter = ScanFilter.Builder()
+            .setServiceUuid(ParcelUuid(BitchatCensus.SERVICE_UUID))
+            .build()
+
+        val scanFilters = listOf(scanFilter, bitchatFilter)
 
         scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -266,6 +271,7 @@ class BluetoothGattClientManager(
             isCurrentlyScanning = true
             
             bleScanner.startScan(scanFilters, powerManager.getScanSettings(), scanCallback)
+            BitchatCensus.markScanning()
             Log.i(TAG, "BLE scan started")
         } catch (e: Exception) {
             Log.e(TAG, "Exception starting scan: ${e.message}")
@@ -292,6 +298,7 @@ class BluetoothGattClientManager(
             
             isCurrentlyScanning = false
             lastScanStopTime = System.currentTimeMillis()
+            BitchatCensus.markScanStopped()
         }
     }
 
@@ -373,7 +380,17 @@ class BluetoothGattClientManager(
         val rssi = result.rssi
         val deviceAddress = device.address
         val scanRecord = result.scanRecord
-        
+
+        // A bitchat device (not Locus): count it and stop. No connection, nothing sent.
+        try {
+            if (BitchatCensus.isBitchatOnly(scanRecord?.serviceUuids?.map { it.uuid }, AppConstants.Mesh.Gatt.SERVICE_UUID)) {
+                BitchatCensus.sighting(
+                    BitchatCensus.idFor(scanRecord?.getServiceData(ParcelUuid(BitchatCensus.SERVICE_UUID)), deviceAddress)
+                )
+                return
+            }
+        } catch (_: Exception) { }
+
         // CRITICAL: Only process devices that have our service UUID
         val hasOurService = scanRecord?.serviceUuids?.any { it.uuid == AppConstants.Mesh.Gatt.SERVICE_UUID } == true
         if (!hasOurService) {
