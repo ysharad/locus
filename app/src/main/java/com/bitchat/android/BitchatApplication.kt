@@ -25,6 +25,7 @@ class BitchatApplication : Application() {
 
         // Measurement first, so the funnel sees everything after it (init is cheap and safe).
         try { com.bitchat.android.connect.Metrics.init(this) } catch (_: Exception) { }
+        registerCensusFlush()
 
         // Initialize the Locus layer before transports can deliver control traffic
         try { com.bitchat.android.connect.ConnectManager.init(this) } catch (_: Exception) { }
@@ -88,5 +89,23 @@ class BitchatApplication : Application() {
         } catch (e: Exception) {
             android.util.Log.w("BitchatApplication", "App Check init failed: ${e.message}")
         }
+    }
+
+    /** Each time the app leaves the foreground, log the bucketed nearby-device count. */
+    private fun registerCensusFlush() {
+        try {
+            androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(
+                object : androidx.lifecycle.DefaultLifecycleObserver {
+                    override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                        try {
+                            val census = com.bitchat.android.connect.BitchatCensus
+                            census.events(census.flush()).forEach { (event, params) ->
+                                com.bitchat.android.connect.Metrics.log(event, params)
+                            }
+                        } catch (_: Exception) { }
+                    }
+                }
+            )
+        } catch (_: Exception) { }
     }
 }

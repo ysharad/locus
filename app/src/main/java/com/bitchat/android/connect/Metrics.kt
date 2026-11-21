@@ -1,6 +1,7 @@
 package com.bitchat.android.connect
 
 import android.content.Context
+import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 
 /**
@@ -8,7 +9,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
  * existed, and the drop-off point was invisible — a profile is only written on save, so the 80
  * who quit left no trace of where. Four events answer that question; screen views, sessions and
  * retention come free with the SDK. No message content, no peer identifiers, no location ever
- * goes into an event.
+ * goes into an event; the nearby-device count is a bucket with no identifiers.
  *
  * Every call is fire-and-forget and swallow-on-failure: measurement must never be a reason the
  * app misbehaves.
@@ -46,4 +47,13 @@ object Metrics {
             analytics?.logEvent(event, null)
         } catch (_: Exception) { }
     }
+
+    fun log(event: String, params: Map<String, String>) {
+        try {
+            analytics?.logEvent(event, if (params.isEmpty()) null else bundleOf(params))
+        } catch (_: Exception) { }
+    }
+
+    internal fun bundleOf(params: Map<String, String>): Bundle =
+        Bundle().apply { params.forEach { (k, v) -> putString(k, v) } }
 }
