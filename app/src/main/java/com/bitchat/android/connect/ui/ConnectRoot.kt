@@ -89,20 +89,20 @@ fun ConnectRoot(viewModel: ChatViewModel) {
     val matches by ConnectManager.matches.collectAsState()
     val connectedPeers by viewModel.connectedPeers.collectAsStateWithLifecycle()
     val unreadChats by viewModel.unreadPrivateMessages.collectAsState()
+    val unseenMatches by ConnectManager.unseenMatches.collectAsState()
 
-    // Celebrate a brand-new mutual connection wherever the user happens to be
-    val seenMatches = remember { mutableStateOf<Set<String>?>(null) }
+    // Celebrate a brand-new mutual connection wherever the user happens to be. ConnectManager
+    // fires this on BOTH sides the instant the match forms; the old set-diff swallowed it for
+    // whoever recomposed at that moment, which is why only the initiator ever saw it.
     var celebratePeerID by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(matches.keys) {
-        val previous = seenMatches.value
-        if (previous != null) {
-            (matches.keys - previous).firstOrNull()?.let { celebratePeerID = it }
-        }
-        seenMatches.value = matches.keys
+    LaunchedEffect(Unit) {
+        ConnectManager.newMatch.collect { peerID -> celebratePeerID = peerID }
     }
 
     val openChat: (String) -> Unit = { peerID ->
-        tab = ConnectTab.CHAT.name
+        // Chats, not Room. ConnectTab.CHAT is labelled "Room" — sending 1:1s there is what made
+        // the app look like it confused private with public.
+        tab = ConnectTab.CONNECTIONS.name
         viewModel.showPrivateChatSheet(peerID)
     }
 
@@ -130,7 +130,7 @@ fun ConnectRoot(viewModel: ChatViewModel) {
     val activity = context as? android.app.Activity
     LaunchedEffect(privateChatPeer) {
         if (privateChatPeer != null) {
-            if (tab != ConnectTab.CHAT.name) tab = ConnectTab.CHAT.name
+            if (tab != ConnectTab.CONNECTIONS.name) tab = ConnectTab.CONNECTIONS.name
         } else if (lastChatPeer != null) {
             tab = ConnectTab.CONNECTIONS.name
             // Closing a chat is the app's natural "conversation over" beat — the only good
@@ -187,7 +187,19 @@ fun ConnectRoot(viewModel: ChatViewModel) {
             Box(Modifier.weight(1f)) {
                 when (currentTab) {
                     ConnectTab.DISCOVER -> DiscoverScreen(viewModel, onInvite = { showInvite = true }, onFilters = { showFilters = true }, onOpenChat = openChat, onWhoLiked = { showWhoLiked = true })
-                    ConnectTab.CONNECTIONS -> {
+                    ConnectTab.CONNECTIONS -> if (privateChatPeer != null) {
+                        // A 1:1 belongs to Chats, where the user tapped it — not to the Room.
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .consumeWindowInsets(WindowInsets.navigationBars)
+                        ) {
+                            ChatScreen(
+                                viewModel = viewModel,
+                                onPrivateChatClosing = { tab = ConnectTab.CONNECTIONS.name }
+                            )
+                        }
+                    } else {
                         // Threads with no match behind them (peer reset identity, or messaged
                         // before a card was exchanged) still need a row — otherwise the only
                         // way back into a live conversation is its notification.
@@ -230,22 +242,10 @@ fun ConnectRoot(viewModel: ChatViewModel) {
                         )
                     }
                     ConnectTab.CHAT -> {
-                        // The Room is the venue-wide noticeboard; when a 1:1 chat is open, the
-                        // inherited ChatScreen hosts that private conversation instead.
-                        if (privateChatPeer != null) {
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .consumeWindowInsets(WindowInsets.navigationBars)
-                            ) {
-                                ChatScreen(
-                                    viewModel = viewModel,
-                                    onPrivateChatClosing = { tab = ConnectTab.CONNECTIONS.name }
-                                )
-                            }
-                        } else {
-                            RoomScreen(viewModel = viewModel, onTonight = { showTonight = true })
-                        }
+                        // The Room is the venue-wide noticeboard and nothing else. A 1:1 used to
+                        // take this tab over, which left the Room unreachable for as long as any
+                        // chat was open and made private and public read as the same place.
+                        RoomScreen(viewModel = viewModel, onTonight = { showTonight = true })
                     }
                     ConnectTab.YOU -> if (editingCard) {
                         ProfileEditorScreen(
@@ -272,7 +272,9 @@ fun ConnectRoot(viewModel: ChatViewModel) {
                     // Chats badge = conversations with unread messages. Likes stay on the
                     // Discover ⚡ tray — they were never a Chats concern.
                     val badgeCount = when (t) {
-                        ConnectTab.CONNECTIONS -> unreadChats.size
+                        // Unread conversations + matches the user hasn't looked at yet — a fresh
+                        // match with zero messages used to badge nothing anywhere.
+                        ConnectTab.CONNECTIONS -> unreadChats.size + unseenMatches.size
                         else -> 0
                     }
                     NavigationBarItem(

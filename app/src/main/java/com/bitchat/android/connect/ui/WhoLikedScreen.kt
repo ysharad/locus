@@ -196,7 +196,7 @@ fun WhoLikedScreen(onClose: () -> Unit, onConnected: () -> Unit = {}) {
                 item {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "One video reveals everyone hidden right now — for good.",
+                        "One video reveals everyone hidden right now, for good.",
                         style = BodyStyle.copy(fontSize = 12.sp),
                         color = Slate
                     )

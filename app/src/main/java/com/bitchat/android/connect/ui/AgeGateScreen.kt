@@ -87,11 +87,11 @@ fun AgeGateScreen() {
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
-                Text("Not yet — leave", style = BodyStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Not yet, leave", style = BodyStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(18.dp))
             Text(
-                "18+ ONLY · NO ACCOUNT · NO SERVER",
+                "18+ ONLY · OFFLINE FIRST · END TO END ENCRYPTED",
                 style = EyebrowStyle.copy(fontSize = 10.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

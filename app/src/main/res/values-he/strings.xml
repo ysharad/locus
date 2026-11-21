@@ -17,7 +17,7 @@
   <string name="location_notes_input_placeholder">הוסף הערה למקום זה</string>
     <string name="skip">דלג</string>
     <string name="bluetooth_recommended">מומלץ Bluetooth</string>
-    <string name="mesh_service_notification_content">רשת Mesh פועלת — %1$d עמיתים</string>
+    <string name="mesh_service_notification_content">רשת Mesh פועלת, %1$d עמיתים</string>
 
   <string name="verify_title">אימות</string>
   <string name="verify_my_qr_title">סרוק כדי לאמת אותי</string>

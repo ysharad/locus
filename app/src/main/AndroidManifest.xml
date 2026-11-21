@@ -79,10 +79,10 @@
         android:theme="@style/Theme.BitchatAndroid"
         tools:targetApi="33">
 
-        <!-- Google test AdMob app ID; replace with the real one before the ads go live. -->
+        <!-- Live AdMob app ID (Locus, Mags Apps). Swapped off Google's test ID 2026-08-24. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-8045188034659976~3580937725" />
 
         <!-- Enables Google Ad Manager (GAM/AdX) requests alongside AdMob. -->
         <meta-data

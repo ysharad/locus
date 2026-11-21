@@ -346,7 +346,7 @@
     </plurals>
 
     <string name="bluetooth_recommended">ब्लुटुथ सिफारिस गरिएको</string>
-    <string name="mesh_service_notification_content">मेश चलिरहेको छ — %1$d पियर्स</string>
+    <string name="mesh_service_notification_content">मेश चलिरहेको छ, %1$d पियर्स</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -385,8 +385,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">परिचय खोल्नुहोस्</string>
   <string name="nearby_notes_reveal">यहाँ छोडिएका नोटहरू छन् कि हेर्नुहोस्</string>
-  <string name="nearby_notes_one">यहाँ 1 नोट छोडिएको छ — पढ्न ट्याप गर्नुहोस्</string>
-  <string name="nearby_notes_many">यहाँ %d नोटहरू छोडिएका छन् — पढ्न ट्याप गर्नुहोस्</string>
+  <string name="nearby_notes_one">यहाँ 1 नोट छोडिएको छ, पढ्न ट्याप गर्नुहोस्</string>
+  <string name="nearby_notes_many">यहाँ %d नोटहरू छोडिएका छन्, पढ्न ट्याप गर्नुहोस्</string>
     <string name="about_language">भाषा</string>
     <string name="about_app_language">एपको भाषा</string>
     <string name="about_system_default">प्रणालीको पूर्वनिर्धारित</string>

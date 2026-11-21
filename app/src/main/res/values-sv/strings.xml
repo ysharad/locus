@@ -333,7 +333,7 @@
   <string name="dismiss">stäng</string>
   <string name="location_notes_input_placeholder">lägg till en anteckning för den här platsen</string>
     <string name="bluetooth_recommended">Bluetooth rekommenderas</string>
-    <string name="mesh_service_notification_content">Mesh körs — %1$d peers</string>
+    <string name="mesh_service_notification_content">Mesh körs, %1$d peers</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -372,8 +372,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">Öppna Om</string>
   <string name="nearby_notes_reveal">kolla om anteckningar lämnats här</string>
-  <string name="nearby_notes_one">1 anteckning lämnad här — tryck för att läsa</string>
-  <string name="nearby_notes_many">%d anteckningar lämnade här — tryck för att läsa</string>
+  <string name="nearby_notes_one">1 anteckning lämnad här, tryck för att läsa</string>
+  <string name="nearby_notes_many">%d anteckningar lämnade här, tryck för att läsa</string>
     <string name="about_language">Språk</string>
     <string name="about_app_language">Appspråk</string>
     <string name="about_system_default">Systemstandard</string>

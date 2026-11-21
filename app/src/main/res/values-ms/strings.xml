@@ -64,7 +64,7 @@
   <!-- Mesh Service Foreground Notification -->
   <string name="mesh_service_channel_name">Perkhidmatan Latar Belakang Mesh</string>
   <string name="mesh_service_channel_desc">Mengekalkan mesh Bluetooth berjalan di latar belakang</string>
-    <string name="mesh_service_notification_content">Mesh sedang berjalan — %1$d rakan</string>
+    <string name="mesh_service_notification_content">Mesh sedang berjalan, %1$d rakan</string>
 
   <!-- Favorites accessibility -->
   <string name="cd_add_favorite">Tambah ke kegemaran</string>

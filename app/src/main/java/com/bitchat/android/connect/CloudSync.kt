@@ -88,7 +88,7 @@ object CloudSync {
     }
 
     /** File an abuse report for review. Create-only server-side; nobody can read them back. */
-    fun report(reportedPeerID: String, reportedProfile: ConnectProfile?) {
+    fun report(reportedPeerID: String, reportedProfile: ConnectProfile?, reason: String? = null) {
         val fp = fingerprint
         signedIn { uid ->
             val doc = mapOf(
@@ -97,6 +97,9 @@ object CloudSync {
                 "reportedPeerID" to reportedPeerID,
                 "reportedName" to (reportedProfile?.name ?: ""),
                 "reportedCard" to (reportedProfile?.toJson() ?: ""),
+                // "under 18" is the report type with legal weight — the published child-safety
+                // standards promise the reason reaches us, so it must actually be stored.
+                "reason" to (reason ?: "unspecified"),
                 "createdAt" to FieldValue.serverTimestamp()
             )
             FirebaseFirestore.getInstance()
@@ -145,12 +148,31 @@ object CloudSync {
         }
     }
 
-    /** Best-effort delete of the cloud profile (card, published key, push token). */
-    fun deleteProfile(fingerprint: String?) {
-        val fp = fingerprint ?: this.fingerprint ?: return
-        signedIn {
+    /**
+     * Best-effort delete of the cloud profile (card, published key, push token).
+     *
+     * [onDone] runs exactly once whatever happens — deleted, failed, or nothing to delete. A wipe
+     * signs out from it, and signing out before the delete lands would cost that write its auth.
+     */
+    fun deleteProfile(fingerprint: String?, onDone: () -> Unit = {}) {
+        val fp = fingerprint ?: this.fingerprint
+        if (fp == null || !available) {
+            onDone()
+            return
+        }
+        var finished = false
+        val finish = { if (!finished) { finished = true; onDone() } }
+        try {
+            if (FirebaseAuth.getInstance().currentUser == null) {
+                finish()
+                return
+            }
             FirebaseFirestore.getInstance().collection("profiles").document(fp).delete()
                 .addOnFailureListener { Log.i(TAG, "profile delete failed: ${it.message}") }
+                .addOnCompleteListener { finish() }
+        } catch (e: Exception) {
+            Log.i(TAG, "profile delete unavailable: ${e.message}")
+            finish()
         }
     }
 

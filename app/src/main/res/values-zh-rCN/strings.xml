@@ -17,7 +17,7 @@
   <string name="location_notes_input_placeholder">为此地点添加一条笔记</string>
     <string name="skip">跳过</string>
     <string name="bluetooth_recommended">建议开启蓝牙</string>
-    <string name="mesh_service_notification_content">Mesh 运行中 — %1$d 个节点</string>
+    <string name="mesh_service_notification_content">Mesh 运行中, %1$d 个节点</string>
 
   <string name="verify_title">验证</string>
   <string name="verify_my_qr_title">扫描以验证我</string>

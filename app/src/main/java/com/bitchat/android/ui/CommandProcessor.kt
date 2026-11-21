@@ -375,7 +375,7 @@ class CommandProcessor(
     ) {
         val args = command.trim().split(Regex("\\s+")).drop(1)
         if (args.isEmpty()) {
-            addSystemMessage("usage: /pay <cashu token> [public] — Cashu tokens are bearer instruments")
+            addSystemMessage("usage: /pay <cashu token> [public]. Cashu tokens are bearer instruments")
             return
         }
 
@@ -384,7 +384,7 @@ class CommandProcessor(
         val token = CashuTokenDecoder.bareToken(rawToken)
         val info = token?.let { CashuTokenDecoder.decode(it, strict = true) }
         if (token == null || info == null) {
-            addSystemMessage("invalid cashu token — not sending it")
+            addSystemMessage("invalid cashu token, not sending it")
             return
         }
 
@@ -426,7 +426,7 @@ class CommandProcessor(
         }
 
         addSystemMessage(
-            "sent ${info.displayAmount ?: "Cashu token"} — bearer token; first redeemer wins"
+            "sent ${info.displayAmount ?: "Cashu token"}, bearer token; first redeemer wins"
         )
     }
 

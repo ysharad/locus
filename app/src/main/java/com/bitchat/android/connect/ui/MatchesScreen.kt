@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +66,7 @@ private data class PersonRow(
     val profile: ConnectProfile?,   // null = stray thread, no card yet
     val here: Boolean,
     val unread: Boolean,
+    val isNewMatch: Boolean = false,
     val subtitle: String,
     val isConversation: Boolean,    // taps open the chat; otherwise the deck
     val sortKey: Long
@@ -87,10 +89,14 @@ fun MatchesScreen(
 ) {
     val matches by ConnectManager.matches.collectAsState()
     val nearby by ConnectManager.nearby.collectAsState()
+    // Snapshot the unseen set on arrival, then mark seen: the NEW MATCH pills should last this
+    // visit, the tab badge should clear the moment the user is here.
+    val newMatchIds = remember { ConnectManager.unseenMatches.value }
+    LaunchedEffect(Unit) { ConnectManager.markMatchesSeen() }
     var peopleTab by rememberSaveable { mutableStateOf(false) }
     var safety by remember { mutableStateOf<Pair<String, String>?>(null) } // peerID to name
 
-    val chatRows = remember(matches, strays, inRange, unreadStems) {
+    val chatRows = remember(matches, strays, inRange, unreadStems, newMatchIds) {
         val matchRows = matches.values.map { m ->
             PersonRow(
                 peerID = m.peerID,
@@ -99,6 +105,7 @@ fun MatchesScreen(
                 profile = m.profile,
                 here = m.peerID in inRange,
                 unread = m.peerID.take(16) in unreadStems,
+                isNewMatch = m.peerID in newMatchIds,
                 subtitle = m.profile.bio.ifBlank { m.profile.hereTo },
                 isConversation = true,
                 sortKey = m.matchedAt
@@ -119,6 +126,7 @@ fun MatchesScreen(
         }
         (matchRows + strayRows).sortedWith(
             compareByDescending<PersonRow> { it.unread }
+                .thenByDescending { it.isNewMatch }
                 .thenByDescending { it.here }
                 .thenByDescending { it.sortKey }
         )
@@ -174,7 +182,7 @@ fun MatchesScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        if (peopleTab) "The radio is listening — people appear as they arrive."
+                        if (peopleTab) "The radio is listening. People appear as they arrive."
                         else "When you and someone nearby both say yes, they land here.",
                         style = BodyStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -214,7 +222,7 @@ fun MatchesScreen(
     safety?.let { (peerID, name) ->
         SafetyDialog(
             name = name,
-            onBlockReport = { ConnectManager.blockAndReport(peerID, report = true); safety = null },
+            onBlockReport = { reason -> ConnectManager.blockAndReport(peerID, report = true, reason = reason); safety = null },
             onBlockOnly = { ConnectManager.blockAndReport(peerID, report = false); safety = null },
             onDismiss = { safety = null }
         )
@@ -263,6 +271,16 @@ private fun PersonRowView(
                     if (r.unread) {
                         Spacer(Modifier.width(6.dp))
                         Box(Modifier.size(6.dp).background(Copper, CircleShape))
+                    }
+                    if (r.isNewMatch) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .border(1.dp, Copper.copy(alpha = 0.6f), RoundedCornerShape(50))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text("NEW MATCH", style = EyebrowStyle.copy(fontSize = 9.sp, letterSpacing = 0.1.em), color = Copper)
+                        }
                     }
                     r.profile?.let { TrustBadge(it, Modifier.padding(start = 8.dp)) }
                 }

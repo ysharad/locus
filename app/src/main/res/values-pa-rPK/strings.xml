@@ -335,7 +335,7 @@
     </plurals>
 
     <string name="bluetooth_recommended">Bluetooth Recommended</string>
-    <string name="mesh_service_notification_content">میش چل رہا ہے — %1$d ساتھی</string>
+    <string name="mesh_service_notification_content">میش چل رہا ہے, %1$d ساتھی</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -374,8 +374,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">ایپ بارے کھولو</string>
   <string name="nearby_notes_reveal">ایتھے چھڈے نوٹس ویکھو</string>
-  <string name="nearby_notes_one">ایتھے 1 نوٹ چھڈیا گیا — پڑھݨ لئی ٹیپ کرو</string>
-  <string name="nearby_notes_many">ایتھے %d نوٹس چھڈے گئے — پڑھݨ لئی ٹیپ کرو</string>
+  <string name="nearby_notes_one">ایتھے 1 نوٹ چھڈیا گیا, پڑھݨ لئی ٹیپ کرو</string>
+  <string name="nearby_notes_many">ایتھے %d نوٹس چھڈے گئے, پڑھݨ لئی ٹیپ کرو</string>
     <string name="about_language">بولی</string>
     <string name="about_app_language">ایپ دی بولی</string>
     <string name="about_system_default">سسٹم دی ڈیفالٹ</string>

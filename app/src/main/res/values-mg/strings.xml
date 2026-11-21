@@ -355,7 +355,7 @@
     </plurals>
 
     <string name="bluetooth_recommended">Bluetooth Recommended</string>
-    <string name="mesh_service_notification_content">Mandeha ny Mesh — %1$d peers</string>
+    <string name="mesh_service_notification_content">Mandeha ny Mesh, %1$d peers</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -394,8 +394,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">Sokafy ny momba</string>
   <string name="nearby_notes_reveal">hizaha raha misy naoty navela teto</string>
-  <string name="nearby_notes_one">naoty 1 no navela teto — tsindrio raha hamaky</string>
-  <string name="nearby_notes_many">naoty %d no navela teto — tsindrio raha hamaky</string>
+  <string name="nearby_notes_one">naoty 1 no navela teto, tsindrio raha hamaky</string>
+  <string name="nearby_notes_many">naoty %d no navela teto, tsindrio raha hamaky</string>
     <string name="about_language">Fiteny</string>
     <string name="about_app_language">Fitenin’ny app</string>
     <string name="about_system_default">Fitenin’ny rafitra</string>

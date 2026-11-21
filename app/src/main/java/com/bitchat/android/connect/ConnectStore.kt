@@ -58,6 +58,15 @@ class ConnectStore(context: Context) {
     fun blockedPeers(): Set<String> = prefs.getStringSet(KEY_BLOCKED, emptySet()) ?: emptySet()
     fun addBlocked(peerID: String) = addToSet(KEY_BLOCKED, peerID)
 
+    // Matches the user hasn't visited Chats since — small, usually empty; drives the Chats badge.
+    fun unseenMatches(): Set<String> = prefs.getStringSet(KEY_UNSEEN_MATCHES, emptySet()) ?: emptySet()
+    fun addUnseenMatch(peerID: String) = addToSet(KEY_UNSEEN_MATCHES, peerID)
+    fun clearUnseenMatches() = prefs.edit().remove(KEY_UNSEEN_MATCHES).apply()
+    fun removeUnseenMatch(peerID: String) {
+        val next = unseenMatches() - peerID
+        prefs.edit().putStringSet(KEY_UNSEEN_MATCHES, next).apply()
+    }
+
     // MARK: - Age gate
 
     fun isAgeConfirmed(): Boolean = prefs.getBoolean(KEY_AGE_CONFIRMED, false)
@@ -205,6 +214,7 @@ class ConnectStore(context: Context) {
         private const val KEY_LIKES_DELIVERED = "likes_delivered"
         private const val KEY_MATCHES = "matches"
         private const val KEY_BLOCKED = "blocked_peers"
+        private const val KEY_UNSEEN_MATCHES = "unseen_matches"
         private const val KEY_AGE_CONFIRMED = "age_confirmed"
     }
 }

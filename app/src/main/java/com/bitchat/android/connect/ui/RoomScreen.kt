@@ -89,8 +89,11 @@ fun RoomScreen(viewModel: ChatViewModel, onTonight: () -> Unit = {}) {
                 val roomCtx = androidx.compose.ui.platform.LocalContext.current
                 val roomCode = remember { com.bitchat.android.connect.RoomCode.current(roomCtx) }
                 if (roomCode != null) {
+                    // Read out as two pairs — "room code: AB-7K" is what someone can say across a
+                    // noisy table without spelling it letter by letter.
+                    val pretty = if (roomCode.length == 4) "${roomCode.take(2)}-${roomCode.drop(2)}" else roomCode
                     Text(
-                        roomCode, style = EyebrowStyle.copy(fontSize = 12.sp, letterSpacing = 0.12.em), color = Copper,
+                        "ROOM CODE: $pretty", style = EyebrowStyle.copy(fontSize = 12.sp, letterSpacing = 0.12.em), color = Copper,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(50))
@@ -99,19 +102,14 @@ fun RoomScreen(viewModel: ChatViewModel, onTonight: () -> Unit = {}) {
                                     type = "text/plain"
                                     putExtra(
                                         android.content.Intent.EXTRA_TEXT,
-                                        "We're on Locus — room $roomCode. Get it: https://play.google.com/store/apps/details?id=com.goapps.locus"
+                                        "We're on Locus, room $pretty. Get it: https://play.google.com/store/apps/details?id=com.goapps.locus"
                                     )
                                 }
                                 roomCtx.startActivity(android.content.Intent.createChooser(send, "Share room code"))
                             }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     )
-                    Spacer(Modifier.width(8.dp))
                 }
-                Text(
-                    "TONIGHT", style = EyebrowStyle.copy(fontSize = 12.sp), color = Jade,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(50)).clickable { onTonight() }.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
             }
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {

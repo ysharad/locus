@@ -346,7 +346,7 @@
     </plurals>
 
     <string name="bluetooth_recommended">Bluetooth Recommended</string>
-    <string name="mesh_service_notification_content">Tumatakbo ang Mesh — %1$d na peer</string>
+    <string name="mesh_service_notification_content">Tumatakbo ang Mesh, %1$d na peer</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -385,8 +385,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">Buksan ang Tungkol</string>
   <string name="nearby_notes_reveal">tingnan kung may mga note na naiwan dito</string>
-  <string name="nearby_notes_one">1 note ang naiwan dito — i-tap para basahin</string>
-  <string name="nearby_notes_many">%d note ang naiwan dito — i-tap para basahin</string>
+  <string name="nearby_notes_one">1 note ang naiwan dito, i-tap para basahin</string>
+  <string name="nearby_notes_many">%d note ang naiwan dito, i-tap para basahin</string>
     <string name="about_language">Wika</string>
     <string name="about_app_language">Wika ng app</string>
     <string name="about_system_default">Default ng system</string>

@@ -964,7 +964,14 @@ class ChatViewModel(
         }
         
         val mentions = messageManager.parseMentions(content, mesh.getPeerNicknames().values.toSet(), state.getNicknameValue())
+        // If the 1:1 sheet is open, this send is private — full stop. `selectedPrivateChatPeer` is
+        // only set at the END of startPrivateChat's disk-IO block, so for a brand-new conversation
+        // (no history to load = the exact moment two people first connect) the composer is live
+        // before it lands. Falling back to the ambient state there sent the message down the
+        // PUBLIC branch and broadcast a private message to the whole room.
+        // sendPrivateMessageDurably re-checks isPeerBlocked, so this cannot bypass a block.
         var selectedPeer = state.getSelectedPrivateChatPeerValue()
+            ?: state.getPrivateChatSheetPeerValue()
         val currentChannelValue = state.getCurrentChannelValue()
         
         if (selectedPeer != null) {
@@ -1322,6 +1329,7 @@ class ChatViewModel(
     fun showPrivateChatSheet(peerID: String) {
         val conversationID = ContactDirectory.canonicalConversationId(peerID)
         state.setPrivateChatSheetPeer(conversationID)
+        com.bitchat.android.connect.Metrics.log(com.bitchat.android.connect.Metrics.CHAT_OPENED)
     }
 
     fun hidePrivateChatSheet() {

@@ -157,7 +157,7 @@ internal fun PhoneLoginPane(
         Spacer(Modifier.height(6.dp))
         Text(
             if (verificationId == null) "Sending the code…"
-            else "Waiting for the code — it fills in by itself if your phone can read it.",
+            else "Waiting for the code. It fills in by itself if your phone can read it.",
             style = BodyStyle.copy(fontSize = 12.sp),
             color = Slate
         )

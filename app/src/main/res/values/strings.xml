@@ -69,7 +69,7 @@
   <!-- Mesh Service Foreground Notification -->
   <string name="mesh_service_channel_name">Mesh Background Service</string>
   <string name="mesh_service_channel_desc">Keeps the Bluetooth mesh running in the background</string>
-    <string name="mesh_service_notification_content">Locus is running — %1$d in range</string>
+    <string name="mesh_service_notification_content">Locus is running, %1$d in range</string>
 
   <!-- Favorites accessibility -->
   <string name="cd_add_favorite">Add to favorites</string>
@@ -152,7 +152,7 @@
   <string name="cd_pick_file">Pick file</string>
 
   <!-- About sheet -->
-  <string name="about_tagline">Discover people around you — no internet needed</string>
+  <string name="about_tagline">Discover people around you, no internet needed</string>
 
   <!-- About sheet: tabs -->
   <string name="about_tab_info">Info</string>
@@ -174,8 +174,8 @@
   <string name="about_section_settings">Settings</string>
 
   <!-- About sheet: feature list -->
-  <string name="about_no_tracking_title">No Tracking</string>
-  <string name="about_no_tracking_desc">No servers, accounts, or data collection.</string>
+  <string name="about_no_tracking_title">Private by Design</string>
+  <string name="about_no_tracking_desc">No account needed, and your location is never recorded or shared.</string>
   <string name="about_ephemeral_title">Ephemeral Identity</string>
   <string name="about_ephemeral_desc">A new peer ID is generated regularly.</string>
   <string name="about_panic_desc">Triple-tap the logo to instantly clear all data.</string>
@@ -188,7 +188,7 @@
   <string name="about_tor_disconnected">Disconnected</string>
 
   <string name="about_offline_mesh_title">Offline Communication</string>
-  <string name="about_offline_mesh_desc">Chat over a Bluetooth mesh with no internet and no servers. Messages relay through nearby devices to extend range.</string>
+  <string name="about_offline_mesh_desc">Chat over a Bluetooth mesh with no internet at all. Messages relay through nearby devices to extend range.</string>
   <string name="about_online_geohash_title">Local Channels</string>
   <string name="about_online_geohash_desc">Geohash channels connect you with people nearby, extending the mesh over public relays.</string>
   <string name="about_e2e_title">End-to-End Encryption</string>
@@ -431,9 +431,9 @@
 
   <!-- Location notes sheet -->
   <string name="nearby_notes_reveal">check for notes left here</string>
-  <string name="nearby_notes_one">1 note left here — tap to read</string>
+  <string name="nearby_notes_one">1 note left here. Tap to read</string>
   <!-- Explicit one/many copy mirrors iOS across locales without CLDR quantity gaps. -->
-  <string name="nearby_notes_many" tools:ignore="PluralsCandidate">%d notes left here — tap to read</string>
+  <string name="nearby_notes_many" tools:ignore="PluralsCandidate">%d notes left here. Tap to read</string>
   <plurals name="location_notes_title">
     <item quantity="one">#%1$s ± 1 • %2$d note</item>
     <item quantity="other">#%1$s ± 1 • %2$d notes</item>
@@ -565,8 +565,8 @@
   <string name="setup_not_complete">Setup Not Complete</string>
   <string name="try_again">Try Again</string>
   <string name="open_settings">Open Settings</string>
-  <string name="privacy_protected">Your Privacy is Protected</string>
-  <string name="privacy_bullets">• Nothing is tracked or collected\n• Chats work with no internet</string>
+  <string name="privacy_protected">Offline first, end to end encrypted</string>
+  <string name="privacy_bullets">• Chats work with no internet\n• Only you and them can read them</string>
   <string name="permissions_header">Permissions</string>
   <string name="grant_permissions">Grant Permissions</string>
   <string name="location_tracking_warning">Locus does NOT track your location</string>

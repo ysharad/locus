@@ -28,7 +28,7 @@ object PhoneAnchor {
             m.contains("format of the phone number") || m.contains("invalid_phone_number") ||
                 m.contains("invalid format") -> "That number doesn't look right."
             m.contains("verification code") && m.contains("invalid") -> "That code isn't right."
-            m.contains("expired") || m.contains("session") -> "That code expired — send a new one."
+            m.contains("expired") || m.contains("session") -> "That code expired. Send a new one."
             m.contains("too many") || m.contains("quota") || m.contains("blocked") ->
                 "Too many tries. Give it a few minutes."
             m.contains("network") || m.contains("timeout") || m.contains("unavailable") ->

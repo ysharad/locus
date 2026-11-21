@@ -88,7 +88,7 @@ fun IcebreakerSheet(
                     }
 
                     openers.isEmpty() -> Text(
-                        "Couldn't reach the ideas service — you'll need internet for this. " +
+                        "Couldn't reach the ideas service. This needs internet. " +
                             "Say hi your own way for now.",
                         style = BodyStyle.copy(fontSize = 13.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant

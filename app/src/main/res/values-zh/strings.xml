@@ -359,7 +359,7 @@
   <string name="dismiss">关闭</string>
   <string name="location_notes_input_placeholder">为此地点添加一条笔记</string>
     <string name="bluetooth_recommended">建议开启蓝牙</string>
-    <string name="mesh_service_notification_content">Mesh 运行中 — %1$d 个节点</string>
+    <string name="mesh_service_notification_content">Mesh 运行中, %1$d 个节点</string>
 
   <string name="verify_title">验证</string>
   <string name="verify_my_qr_title">扫描以验证我</string>
@@ -398,8 +398,8 @@
   <string name="verify_success_system_message">已验证 %1$s</string>
     <string name="cd_open_about">打开“关于”</string>
   <string name="nearby_notes_reveal">查看这里留下的留言</string>
-  <string name="nearby_notes_one">这里留有 1 条留言 — 点按阅读</string>
-  <string name="nearby_notes_many">这里留有 %d 条留言 — 点按阅读</string>
+  <string name="nearby_notes_one">这里留有 1 条留言, 点按阅读</string>
+  <string name="nearby_notes_many">这里留有 %d 条留言, 点按阅读</string>
     <string name="about_language">语言</string>
     <string name="about_app_language">应用语言</string>
     <string name="about_system_default">跟随系统</string>

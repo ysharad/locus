@@ -348,7 +348,7 @@
   <string name="dismiss">إغلاق</string>
   <string name="location_notes_input_placeholder">أضف ملاحظة لهذا المكان</string>
     <string name="bluetooth_recommended">بلوتوث موصى به</string>
-    <string name="mesh_service_notification_content">الشبكة تعمل — %1$d أقران</string>
+    <string name="mesh_service_notification_content">الشبكة تعمل, %1$d أقران</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -387,8 +387,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">فتح قسم حول</string>
   <string name="nearby_notes_reveal">تحقّق من الملاحظات المتروكة هنا</string>
-  <string name="nearby_notes_one">تُركت ملاحظة واحدة هنا — انقر للقراءة</string>
-  <string name="nearby_notes_many">تُركت %d ملاحظات هنا — انقر للقراءة</string>
+  <string name="nearby_notes_one">تُركت ملاحظة واحدة هنا, انقر للقراءة</string>
+  <string name="nearby_notes_many">تُركت %d ملاحظات هنا, انقر للقراءة</string>
     <string name="about_language">اللغة</string>
     <string name="about_app_language">لغة التطبيق</string>
     <string name="about_system_default">إعداد النظام الافتراضي</string>

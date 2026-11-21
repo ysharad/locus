@@ -197,7 +197,7 @@ fun ProfileEditorScreen(
             Column(Modifier.weight(1f)) {
                 Text("Stay anonymous", style = BodyStyle.copy(fontSize = 15.sp), color = MaterialTheme.colorScheme.onSurface)
                 Text(
-                    if (stayAnon) "Pick any name — nobody sees who's behind it."
+                    if (stayAnon) "Pick any name. Nobody sees who's behind it."
                     else "Your real name is on your profile.",
                     style = BodyStyle.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -233,7 +233,7 @@ fun ProfileEditorScreen(
                 else { realName = name; editorStore.setStr("name_real", name) }
                 saved = false
             },
-            label = { Text(if (stayAnon) "Anonymous name — pick anything" else "Your name") },
+            label = { Text(if (stayAnon) "Anonymous name, pick anything" else "Your name") },
             singleLine = true,
             textStyle = BodyStyle,
             modifier = Modifier.fillMaxWidth()

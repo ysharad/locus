@@ -373,7 +373,7 @@
   <string name="dismiss">sluiten</string>
   <string name="location_notes_input_placeholder">voeg een notitie toe voor deze plek</string>
     <string name="bluetooth_recommended">Bluetooth aanbevolen</string>
-    <string name="mesh_service_notification_content">Mesh actief — %1$d peers</string>
+    <string name="mesh_service_notification_content">Mesh actief, %1$d peers</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -412,8 +412,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">Info openen</string>
   <string name="nearby_notes_reveal">kijk of hier notities zijn achtergelaten</string>
-  <string name="nearby_notes_one">1 notitie hier achtergelaten — tik om te lezen</string>
-  <string name="nearby_notes_many">%d notities hier achtergelaten — tik om te lezen</string>
+  <string name="nearby_notes_one">1 notitie hier achtergelaten, tik om te lezen</string>
+  <string name="nearby_notes_many">%d notities hier achtergelaten, tik om te lezen</string>
     <string name="about_language">Taal</string>
     <string name="about_app_language">App-taal</string>
     <string name="about_system_default">Systeemstandaard</string>
