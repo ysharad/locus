@@ -91,11 +91,15 @@ class BitchatApplication : Application() {
         }
     }
 
-    /** Each time the app leaves the foreground, log the bucketed nearby-device count. */
+    /** Count nearby devices per foreground session; log the bucket when the app leaves the foreground. */
     private fun registerCensusFlush() {
         try {
             androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(
                 object : androidx.lifecycle.DefaultLifecycleObserver {
+                    override fun onStart(owner: androidx.lifecycle.LifecycleOwner) {
+                        try { com.bitchat.android.connect.BitchatCensus.beginSession() } catch (_: Exception) { }
+                    }
+
                     override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
                         try {
                             val census = com.bitchat.android.connect.BitchatCensus

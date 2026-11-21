@@ -60,6 +60,58 @@ class BitchatCensusTest {
         assertNull(t.flush(3))
     }
 
+    private val peer = ByteArray(8) { (it + 1).toByte() }
+
+    @Test
+    fun `sightings before beginSession are not counted`() {
+        val t = BitchatCensus.Tally()
+        t.sighting(null, "AA", 0)
+        t.beginSession(1)
+        assertNull(t.flush(2))
+    }
+
+    @Test
+    fun `beginSession keeps a running scan`() {
+        val t = BitchatCensus.Tally()
+        t.markScanning()
+        t.flush(0)
+        t.beginSession(1)
+        assertEquals(BitchatCensus.Summary(scanned = true, peak = 0), t.flush(2))
+    }
+
+    @Test
+    fun `address then peer id for the same device counts once`() {
+        val t = BitchatCensus.Tally()
+        t.sighting(null, "AA", 0)
+        t.sighting(peer, "AA", 1_000)
+        assertEquals(1, t.flush(2_000)!!.peak)
+    }
+
+    @Test
+    fun `peer id then address-only result for the same device counts once`() {
+        val t = BitchatCensus.Tally()
+        t.sighting(peer, "AA", 0)
+        t.sighting(null, "AA", 20_000)
+        assertEquals(1, t.flush(21_000)!!.peak)
+    }
+
+    @Test
+    fun `two devices with peer ids count twice`() {
+        val t = BitchatCensus.Tally()
+        t.sighting(peer, "AA", 0)
+        t.sighting(ByteArray(8) { 9 }, "BB", 0)
+        assertEquals(2, t.flush(1)!!.peak)
+    }
+
+    @Test
+    fun `repeat callbacks within 10s are ignored`() {
+        val t = BitchatCensus.Tally()
+        t.sighting(null, "AA", 0)
+        t.sighting(null, "AA", 9_000) // throttled: AA's last-seen stays at 0
+        t.sighting(null, "BB", 905_000) // AA is now older than 15 min
+        assertEquals(1, t.flush(905_000)!!.peak)
+    }
+
     @Test
     fun `flush resets peak`() {
         val t = BitchatCensus.Tally()

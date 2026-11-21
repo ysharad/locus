@@ -384,9 +384,7 @@ class BluetoothGattClientManager(
         // A bitchat device (not Locus): count it and stop. No connection, nothing sent.
         try {
             if (BitchatCensus.isBitchatOnly(scanRecord?.serviceUuids?.map { it.uuid }, AppConstants.Mesh.Gatt.SERVICE_UUID)) {
-                BitchatCensus.sighting(
-                    BitchatCensus.idFor(scanRecord?.getServiceData(ParcelUuid(BitchatCensus.SERVICE_UUID)), deviceAddress)
-                )
+                BitchatCensus.sighting(scanRecord?.getServiceData(ParcelUuid(BitchatCensus.SERVICE_UUID)), deviceAddress)
                 return
             }
         } catch (_: Exception) { }
