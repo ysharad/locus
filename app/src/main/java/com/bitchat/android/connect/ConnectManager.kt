@@ -280,43 +280,6 @@ object ConnectManager {
         _blocked.value = _blocked.value - companions.toSet()
     }
 
-    /** Erase all Locus data on this device and, best-effort, remove the cloud profile. */
-    fun wipeLocalData() = synchronized(lock) {
-        ChatRelay.stopListening()
-        val fp = mesh?.let { try { it.getIdentityFingerprint() } catch (e: Exception) { null } }
-        // Sign out only once the cloud delete has landed — it needs the auth we're dropping.
-        // Without this the Firebase session outlived the wipe, so the first-run IdentityScreen
-        // still saw google.com/phone in providerData and greeted the user with "You're logged in —
-        // your chats and connections are saved", right after deleting exactly those things.
-        CloudSync.deleteProfile(fp) {
-            try { GoogleAnchor.logout() } catch (_: Exception) { }
-        }
-        store?.wipe()
-        _myProfile.value = null
-        _liked.value = emptySet()
-        _passed.value = emptySet()
-        _likesReceived.value = emptySet()
-        _matches.value = emptyMap()
-        _unseenMatches.value = emptySet()
-        _blocked.value = emptySet()
-        _nearby.value = emptyMap()
-        _keepChats.value = false
-        _visible.value = true
-        _ageConfirmed.value = false
-        _identitySeen.value = false
-        // Also clear the in-memory session state a wipe previously left behind.
-        _reactions.value = emptyMap()
-        _typingFrom.value = emptySet()
-        _wavedAt.value = emptySet()
-        _wavesReceived.value = emptySet()
-        _revealUntil.value = 0L
-        _boostUntil.value = 0L
-        pendingWaves.clear()
-        pendingReactions.clear()
-        typingToken.clear()
-        lastTypingSentAt.clear()
-    }
-
     fun confirmAge() {
         store?.setAgeConfirmed()
         _ageConfirmed.value = true
@@ -345,8 +308,12 @@ object ConnectManager {
         // anyone relays: the mailbox rules bind a sender to the profile they own, and key/token
         // writes are otherwise denied as creates on a missing doc.
         _myProfile.value?.let { CloudSync.syncProfile(it) }
-        ChatRelay.startListening(ctx, fp, _myProfile.value?.name ?: "You", sc)
-        ChatRelay.publishFcmToken(fp)
+        // The listener is refused for good if it starts before we own the profile.
+        CloudSync.whenClaimed {
+            if (!_keepChats.value) return@whenClaimed
+            ChatRelay.startListening(ctx, fp, _myProfile.value?.name ?: "You", sc)
+            ChatRelay.publishFcmToken(fp)
+        }
     }
 
     /**

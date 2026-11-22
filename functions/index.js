@@ -168,3 +168,19 @@ exports.claimVerified = onCall(async (request) => {
   );
   return { verified: true };
 });
+
+const identity = require("./identity");
+
+function callerUid(request) {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  return request.auth.uid;
+}
+
+exports.profileChallenge = onCall({ region: "us-central1" }, (request) =>
+  identity.createChallenge(admin.firestore(), callerUid(request)));
+
+exports.proveProfile = onCall({ region: "us-central1" }, (request) =>
+  identity.proveProfile(admin.firestore(), callerUid(request), request.data));
+
+exports.deleteMyData = onCall({ region: "us-central1" }, (request) =>
+  identity.deleteAccount(admin.firestore(), admin.auth(), callerUid(request)));

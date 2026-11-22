@@ -48,8 +48,10 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bitchat.android.BuildConfig
+import com.bitchat.android.connect.CloudSync
 import com.bitchat.android.connect.ConnectManager
 import com.bitchat.android.connect.ConnectStore
+import com.bitchat.android.connect.DataEraser
 import com.bitchat.android.ui.AdsBootstrap
 import com.bitchat.android.ui.theme.ThemePreference
 import com.bitchat.android.ui.theme.ThemePreferenceManager
@@ -237,15 +239,15 @@ private fun PrivacySub(onBack: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text("Delete everything", style = BodyStyle.copy(fontSize = 16.sp), color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(3.dp))
-                Text("Key, profile, chats, connections. Instant.", style = BodyStyle.copy(fontSize = 13.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Key, profile, chats, connections, account.", style = BodyStyle.copy(fontSize = 13.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text("→", color = MaterialTheme.colorScheme.error)
         }
         Hair()
-        Footer("WE HOLD YOUR CARD AND A TIMESTAMP. NOTHING ELSE.")
+        Footer("WHAT WE HOLD IS LISTED IN THE PRIVACY POLICY.")
     }
 
-    if (confirmWipe) WipeDialog(onConfirm = { ConnectManager.wipeLocalData(); confirmWipe = false; onBack() }, onDismiss = { confirmWipe = false })
+    if (confirmWipe) WipeDialog(onDismiss = { confirmWipe = false })
 }
 
 @Composable
@@ -503,18 +505,38 @@ private fun ThemeToggle(current: ThemePreference, onSelect: (ThemePreference) ->
 }
 
 @Composable
-private fun WipeDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
+private fun WipeDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var erasing by remember { mutableStateOf(false) }
+    var cloudFailed by remember { mutableStateOf(false) }
+    Dialog(onDismissRequest = { if (!erasing) onDismiss() }) {
         Card(modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.error, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
             Column(Modifier.padding(24.dp)) {
-                Text("Delete everything", style = TitleStyle.copy(fontSize = 22.sp), color = MaterialTheme.colorScheme.onSurface)
+                Text(if (cloudFailed) "Couldn't reach Locus" else "Delete everything", style = TitleStyle.copy(fontSize = 22.sp), color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(10.dp))
-                Text("Your profile, connections, and settings are erased from this phone, and your cloud profile is removed. This can't be undone.", style = BodyStyle.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (cloudFailed) "Nothing has been erased from this phone. Connect and try again, or erase only this phone. If you do that, email $SUPPORT_EMAIL to remove your online copy."
+                    else "Your chats, key, profile, connections and settings are erased from this phone, and your account and online copy are deleted. Locus will close. This can't be undone.",
+                    style = BodyStyle.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.height(20.dp))
-                Button(onClick = onConfirm, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError)) {
-                    Text("Delete everything", style = BodyStyle.copy(fontWeight = FontWeight.SemiBold))
+                Button(
+                    onClick = {
+                        erasing = true
+                        DataEraser.eraseEverything(context, CloudSync::deleteAccount) { erasing = false; cloudFailed = true }
+                    },
+                    enabled = !erasing,
+                    modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+                ) {
+                    Text(if (erasing) "Deleting…" else if (cloudFailed) "Try again" else "Delete everything", style = BodyStyle.copy(fontWeight = FontWeight.SemiBold))
                 }
-                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancel", style = BodyStyle, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (cloudFailed && !erasing) {
+                    TextButton(onClick = { DataEraser.erasePhone(context) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Erase only this phone", style = BodyStyle, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDismiss, enabled = !erasing, modifier = Modifier.fillMaxWidth()) { Text("Cancel", style = BodyStyle, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }

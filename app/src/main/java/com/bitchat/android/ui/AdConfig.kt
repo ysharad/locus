@@ -51,6 +51,13 @@ data class AdConfig(
         return id.ifBlank { null }
     }
 
+    /** The unit to load, or null when ads are switched off. */
+    fun rewardedUnitFor(placement: RewardedPlacement): String? = when {
+        !adsEnabled -> null
+        placement == RewardedPlacement.REVEAL -> rewardedUnit
+        else -> rewardedBoostUnit
+    }
+
     companion object {
         const val MODE_ADMOB = "admob"
         const val MODE_GAM = "gam"
@@ -139,6 +146,9 @@ object AdConfigLoader {
 
     @Volatile
     private var memory: AdConfig? = null
+
+    /** The config already loaded this session, if any. */
+    fun current(): AdConfig? = memory
 
     suspend fun load(context: Context): AdConfig {
         memory?.let { return it }

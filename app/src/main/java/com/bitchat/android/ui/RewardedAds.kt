@@ -67,9 +67,10 @@ object RewardedAds {
             } catch (_: Exception) {
                 null
             }
-            val unit = when (placement) {
-                RewardedPlacement.REVEAL -> cfg?.rewardedUnit ?: AdConfig.LIVE_ADX_REWARDED
-                RewardedPlacement.BOOST -> cfg?.rewardedBoostUnit ?: AdConfig.LIVE_ADX_REWARDED_BOOST
+            val unit = (cfg ?: AdConfig()).rewardedUnitFor(placement)
+            if (unit == null) {
+                loading[placement] = false
+                return@launch
             }
             val callback = object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(loaded: RewardedAd) {
@@ -171,6 +172,11 @@ object RewardedAds {
         onReward: () -> Unit,
         onUnavailable: () -> Unit = {},
     ) {
+        // ads_enabled=false is the kill switch for every format; the perk is then simply free.
+        if (AdConfigLoader.current()?.adsEnabled == false) {
+            onReward()
+            return
+        }
         val current = ads.remove(placement) // consume; a replacement is loaded on dismissal
         if (current == null) {
             onUnavailable()

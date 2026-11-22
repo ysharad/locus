@@ -29,7 +29,9 @@ import org.prebid.mobile.BannerAdUnit
 import org.prebid.mobile.PrebidMobile
 import org.prebid.mobile.api.data.InitializationStatus
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.thread
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Consent + SDK bootstrap. Call from MainActivity.onCreate. Gathers UMP consent
@@ -101,7 +103,13 @@ object AdsBootstrap {
     private fun startMobileAds(context: Context) {
         if (!mobileAdsStarted.compareAndSet(false, true)) return
         val appContext = context.applicationContext
-        thread { MobileAds.initialize(appContext) { RewardedAds.preload(appContext) } }
+        CoroutineScope(Dispatchers.IO).launch {
+            if (AdConfigLoader.load(appContext).adsEnabled) {
+                MobileAds.initialize(appContext) { RewardedAds.preload(appContext) }
+            } else {
+                mobileAdsStarted.set(false)
+            }
+        }
     }
 
     /**
