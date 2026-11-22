@@ -29,10 +29,15 @@ class BluetoothPermissionManager(private val context: Context) {
             ))
         }
         
-        permissions.addAll(listOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ))
+        // Location only gates BLE up to API 30. From API 31 the manifest caps these at
+        // maxSdkVersion=30, so they can never be granted — requiring them here would leave the
+        // mesh permanently unable to start.
+        if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.R) {
+            permissions.addAll(listOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ))
+        }
 
         return permissions.all { 
             ActivityCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED 

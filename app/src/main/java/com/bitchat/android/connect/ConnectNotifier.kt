@@ -171,7 +171,7 @@ object ConnectNotifier {
         NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(
-                if (s.isConnection) "${s.emoji} ${s.name} is here — you're connected ⚡"
+                if (s.isConnection) "${s.emoji} ${s.name} is here. You're connected ⚡"
                 else "${s.emoji} ${s.name} is nearby"
             )
             .setContentText(

@@ -52,7 +52,7 @@ object GoogleAnchor {
                 .getResult(ApiException::class.java)
             val idToken = account?.idToken
             if (idToken.isNullOrBlank()) {
-                onResult(false, "Google didn't return a token — try again.")
+                onResult(false, "Google didn't return a token. Try again.")
                 return
             }
             val credential = GoogleAuthProvider.getCredential(idToken, null)

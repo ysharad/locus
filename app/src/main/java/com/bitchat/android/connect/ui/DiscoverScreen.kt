@@ -395,7 +395,7 @@ private fun CardDeck(deck: List<ConnectProfile>, connectedSet: Set<String>) {
     safetyFor?.let { target ->
         SafetyDialog(
             name = target.name,
-            onBlockReport = { ConnectManager.blockAndReport(target.peerID, report = true); safetyFor = null },
+            onBlockReport = { reason -> ConnectManager.blockAndReport(target.peerID, report = true, reason = reason); safetyFor = null },
             onBlockOnly = { ConnectManager.blockAndReport(target.peerID, report = false); safetyFor = null },
             onDismiss = { safetyFor = null }
         )
@@ -591,7 +591,7 @@ private fun EmptyDeck(peersInRange: Int, hasPassed: Boolean, admirers: Int, onIn
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            if (cleared) "Everyone in range is already yours — they're on the radar and in Chats." else "Locus is listening nearby — leave it open.",
+            if (cleared) "Everyone in range is already yours. They're on the radar and in Chats." else "Locus is listening nearby. Leave it open.",
             style = BodyStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -616,8 +616,8 @@ private fun EmptyDeck(peersInRange: Int, hasPassed: Boolean, admirers: Int, onIn
                         val sent = ConnectManager.wakeRoom()
                         android.widget.Toast.makeText(
                             wakeCtx,
-                            if (sent) "Wake sent — sleeping phones nearby will hear it."
-                            else "Room already woken — try again in a few minutes.",
+                            if (sent) "Wake sent. Nearby phones will hear it."
+                            else "Already woken. Try again in a few minutes.",
                             android.widget.Toast.LENGTH_SHORT
                         ).show()
                     }

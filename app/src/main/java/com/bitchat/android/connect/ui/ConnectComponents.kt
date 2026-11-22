@@ -364,6 +364,15 @@ internal fun MatchCelebration(
             }
             Spacer(Modifier.height(10.dp))
             OutlinedButtonRow("Keep discovering", onDismiss)
+            Spacer(Modifier.height(12.dp))
+            // Dismissing used to end the only thread back to this person — say where they went.
+            Text(
+                "They're in Chats whenever you're ready.",
+                style = BodyStyle.copy(fontSize = 13.sp),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(Modifier.height(22.dp))
             Text(
                 "ENCRYPTED · KEYS STAY ON YOUR PHONES",
@@ -387,14 +396,22 @@ private fun OutlinedButtonRow(label: String, onClick: () -> Unit) {
     }
 }
 
-/** Block/report dialog, reachable from every surface that shows a stranger's card. */
+/**
+ * Block/report dialog, reachable from every surface that shows a stranger's card.
+ * [onBlockReport] receives the chosen reason (null if none was picked) — the chips used to hold
+ * their selection in local state nothing read, so every report reached the server reasonless
+ * while the published child-safety standards promised the reason would be included.
+ */
 @Composable
 internal fun SafetyDialog(
     name: String,
-    onBlockReport: () -> Unit,
+    onBlockReport: (String?) -> Unit,
     onBlockOnly: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val reason = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp)),
@@ -416,10 +433,10 @@ internal fun SafetyDialog(
                 Spacer(Modifier.height(18.dp))
                 Text("ALSO REPORT FOR…", style = EyebrowStyle.copy(letterSpacing = 0.14.em), color = Slate)
                 Spacer(Modifier.height(10.dp))
-                ReportReasonChips()
+                ReportReasonChips(selected = reason.value, onSelect = { reason.value = it })
                 Spacer(Modifier.height(20.dp))
                 Button(
-                    onClick = onBlockReport,
+                    onClick = { onBlockReport(reason.value) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -451,18 +468,17 @@ internal fun SafetyDialog(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReportReasonChips() {
+private fun ReportReasonChips(selected: String?, onSelect: (String?) -> Unit) {
     val reasons = listOf("harassment", "inappropriate", "under 18", "something else")
-    val selected = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(-1) }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        reasons.forEachIndexed { i, r ->
-            val on = selected.value == i
+        reasons.forEach { r ->
+            val on = selected == r
             Box(
                 Modifier
                     .clip(RoundedCornerShape(50))
                     .border(1.dp, if (on) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline, RoundedCornerShape(50))
                     .background(if (on) Color(0xFF2A1512) else Color.Transparent)
-                    .clickable { selected.value = if (on) -1 else i }
+                    .clickable { onSelect(if (on) null else r) }
                     .padding(horizontal = 13.dp, vertical = 9.dp)
             ) {
                 Text(r, style = BodyStyle.copy(fontSize = 13.sp), color = if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)

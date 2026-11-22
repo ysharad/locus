@@ -7,8 +7,11 @@ import com.bitchat.android.model.BitchatMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -128,6 +131,33 @@ object ConnectManager {
     private val _matches = MutableStateFlow<Map<String, ConnectMatch>>(emptyMap())
     val matches: StateFlow<Map<String, ConnectMatch>> = _matches.asStateFlow()
 
+    /**
+     * Fires once, on BOTH sides, the moment a connection becomes mutual. The celebration used to
+     * be inferred by diffing the match map against a baseline held in `remember` — and the very
+     * first diff is deliberately swallowed to seed that baseline, so whoever's screen recomposed
+     * fresh at that instant (the person tapping Connect back, whose tap closes a sheet) had their
+     * match counted as "baseline" and never celebrated. An explicit event has no baseline to lose.
+     * No replay: a celebration is a live moment, not something to replay on next launch.
+     */
+    private val _newMatch = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val newMatch: SharedFlow<String> = _newMatch.asSharedFlow()
+
+    /**
+     * Matches made since the user last visited Chats. This is what badges the CHATS tab: an unread
+     * message already counted, but a brand-new match has no messages, so dismissing the
+     * celebration left no signal anywhere that a person was waiting. Persisted, so a match made
+     * just before closing the app still shows when it reopens.
+     */
+    private val _unseenMatches = MutableStateFlow<Set<String>>(emptySet())
+    val unseenMatches: StateFlow<Set<String>> = _unseenMatches.asStateFlow()
+
+    /** The user is looking at Chats — every waiting match is now seen. */
+    fun markMatchesSeen() {
+        if (_unseenMatches.value.isEmpty()) return
+        store?.clearUnseenMatches()
+        synchronized(lock) { _unseenMatches.value = emptySet() }
+    }
+
     private val _blocked = MutableStateFlow<Set<String>>(emptySet())
     val blocked: StateFlow<Set<String>> = _blocked.asStateFlow()
 
@@ -202,6 +232,7 @@ object ConnectManager {
         _passed.value = s.passedPeers()
         _likesReceived.value = s.likesReceived()
         _matches.value = s.loadMatches()
+        _unseenMatches.value = s.unseenMatches()
         _blocked.value = s.blockedPeers()
         _ageConfirmed.value = s.isAgeConfirmed()
         _revealedLikes.value = s.revealedLikes()
@@ -249,39 +280,10 @@ object ConnectManager {
         _blocked.value = _blocked.value - companions.toSet()
     }
 
-    /** Erase all Locus data on this device and, best-effort, remove the cloud profile. */
-    fun wipeLocalData() = synchronized(lock) {
-        ChatRelay.stopListening()
-        val fp = mesh?.let { try { it.getIdentityFingerprint() } catch (e: Exception) { null } }
-        CloudSync.deleteProfile(fp)
-        store?.wipe()
-        _myProfile.value = null
-        _liked.value = emptySet()
-        _passed.value = emptySet()
-        _likesReceived.value = emptySet()
-        _matches.value = emptyMap()
-        _blocked.value = emptySet()
-        _nearby.value = emptyMap()
-        _keepChats.value = false
-        _visible.value = true
-        _ageConfirmed.value = false
-        _identitySeen.value = false
-        // Also clear the in-memory session state a wipe previously left behind.
-        _reactions.value = emptyMap()
-        _typingFrom.value = emptySet()
-        _wavedAt.value = emptySet()
-        _wavesReceived.value = emptySet()
-        _revealUntil.value = 0L
-        _boostUntil.value = 0L
-        pendingWaves.clear()
-        pendingReactions.clear()
-        typingToken.clear()
-        lastTypingSentAt.clear()
-    }
-
     fun confirmAge() {
         store?.setAgeConfirmed()
         _ageConfirmed.value = true
+        Metrics.log(Metrics.IDENTITY_DONE)
     }
 
     fun markIdentitySeen() {
@@ -306,8 +308,12 @@ object ConnectManager {
         // anyone relays: the mailbox rules bind a sender to the profile they own, and key/token
         // writes are otherwise denied as creates on a missing doc.
         _myProfile.value?.let { CloudSync.syncProfile(it) }
-        ChatRelay.startListening(ctx, fp, _myProfile.value?.name ?: "You", sc)
-        ChatRelay.publishFcmToken(fp)
+        // The listener is refused for good if it starts before we own the profile.
+        CloudSync.whenClaimed {
+            if (!_keepChats.value) return@whenClaimed
+            ChatRelay.startListening(ctx, fp, _myProfile.value?.name ?: "You", sc)
+            ChatRelay.publishFcmToken(fp)
+        }
     }
 
     /**
@@ -403,6 +409,11 @@ object ConnectManager {
             val now = System.currentTimeMillis()
             ConnectSignal.decodeProfile(content, peerID, now)?.let { profile ->
                 onProfileReceived(profile)
+                // The card came over the mesh from this Noise identity — pin its relay key to
+                // that fingerprint. First-hand beats the Firestore copy (squattable) every time.
+                if (profile.chatPubKey.isNotBlank() && fp != null) {
+                    ChatRelay.pinPeerKey(appContext, fp, profile.chatPubKey)
+                }
                 return true
             }
             if (ConnectSignal.isLike(content) && message.isPrivate) {
@@ -479,6 +490,8 @@ object ConnectManager {
             verified = prev?.verified == true
         )
         s.saveMyProfile(stamped)
+        // First save = the funnel's end; edits don't recount.
+        if (prev == null) Metrics.log(Metrics.PROFILE_SAVED)
         _myProfile.value = stamped
         broadcastProfile(force = true)
         CloudSync.syncProfile(stamped)
@@ -548,7 +561,7 @@ object ConnectManager {
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
                         android.widget.Toast.makeText(
                             ctx,
-                            "Daily connect limit reached — sign in to verify and keep going.",
+                            "Daily connect limit reached. Sign in to verify and keep going.",
                             android.widget.Toast.LENGTH_LONG
                         ).show()
                     }
@@ -590,6 +603,9 @@ object ConnectManager {
         val match = ConnectMatch(profile.peerID, profile, System.currentTimeMillis())
         _matches.value = _matches.value + (profile.peerID to match)
         s.saveMatches(_matches.value.filterKeys { !it.startsWith(DEMO_PREFIX) })
+        _newMatch.tryEmit(profile.peerID)
+        s.addUnseenMatch(profile.peerID)
+        _unseenMatches.value = _unseenMatches.value + profile.peerID
         // Best-effort: tell them over the mesh so it's mutual if they're in range.
         try {
             if (mesh?.hasEstablishedSession(profile.peerID) == true) {
@@ -791,7 +807,7 @@ object ConnectManager {
         return fp != null && fp in _blocked.value
     }
 
-    fun blockAndReport(peerID: String, report: Boolean) = synchronized(lock) {
+    fun blockAndReport(peerID: String, report: Boolean, reason: String? = null) = synchronized(lock) {
         val s = store ?: return
         val profile = _nearby.value[peerID] ?: _matches.value[peerID]?.profile
         // Persist the stable fingerprint (survives peerID rotation) AND the raw peerID as a fallback.
@@ -799,7 +815,7 @@ object ConnectManager {
         val keys = setOfNotNull(peerID, fp)
         if (!peerID.startsWith(DEMO_PREFIX)) {
             keys.forEach { s.addBlocked(it) }
-            if (report) CloudSync.report(peerID, profile)
+            if (report) CloudSync.report(peerID, profile, reason)
         }
         _blocked.value = _blocked.value + keys
         _nearby.value = _nearby.value - peerID
@@ -810,6 +826,10 @@ object ConnectManager {
         if (_matches.value.containsKey(peerID)) {
             _matches.value = _matches.value - peerID
             s.saveMatches(_matches.value.filterKeys { !it.startsWith(DEMO_PREFIX) })
+        }
+        if (peerID in _unseenMatches.value) {
+            s.removeUnseenMatch(peerID)
+            _unseenMatches.value = _unseenMatches.value - peerID
         }
         // Blocking wipes your swipe history for this person. Without this, an unblock leaves them
         // in `liked`/`passed` forever — hidden from the deck and radar with no way back in.
@@ -842,6 +862,12 @@ object ConnectManager {
         s.saveMatches(_matches.value.filterKeys { !it.startsWith(DEMO_PREFIX) })
         s.removeLikeReceived(peerID)
         _likesReceived.value = _likesReceived.value - peerID
+        // Both sides reach here: the initiator when their like is returned, and the person
+        // tapping Connect back when ours was already waiting.
+        _newMatch.tryEmit(peerID)
+        Metrics.log(Metrics.MATCH_MADE)
+        if (!peerID.startsWith(DEMO_PREFIX)) s.addUnseenMatch(peerID)
+        _unseenMatches.value = _unseenMatches.value + peerID
     }
 
     /** Seed a few local demo cards so the deck/match flow can be tried without other devices. */
@@ -870,7 +896,12 @@ object ConnectManager {
         if (now - lastBroadcastAt < gap) return
         lastBroadcastAt = now
         try {
-            m.sendMessage(ConnectSignal.encodeProfile(profile))
+            // Carry the relay key in the card: peers who met us over BLE pin it, so the relay
+            // seals to the key we announced in person even if our Firestore doc was squatted.
+            val withKey = appContext?.let { ctx ->
+                try { profile.copy(chatPubKey = ChatKeys.publicKeyB64(ctx)) } catch (_: Exception) { profile }
+            } ?: profile
+            m.sendMessage(ConnectSignal.encodeProfile(withKey))
         } catch (e: Exception) {
             Log.w(TAG, "Profile broadcast failed: ${e.message}")
         }

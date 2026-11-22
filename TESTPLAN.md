@@ -172,6 +172,169 @@ Product call: the Firebase relay is THE out-of-mesh path; Nostr was an unreachab
 ## Launch-gate checklist (pre-existing, verify before store push)
 - [ ] G1 Swap TEST AdMob app-id + units → real (MANDATORY before production)
 - [ ] G2 versionCode bump for release AAB
-- [ ] G3 firestore.rules deployed = repo version
+- [x] G3 firestore.rules deployed = repo version — deployed 2026-08-24 with the get/list split
 - [ ] G4 Release-signed AAB smoke test (R8) — debug≠release behavior (minify!)
 - [ ] G5 Play listing assets + Data Safety form consistency
+- [ ] **G6 Bind `profiles/{fingerprint}` to its real owner (LAUNCH BLOCKER).** `allow create` only
+      checks `uid == request.auth.uid`; nothing proves the caller controls that mesh fingerprint,
+      and no Cloud Function validates it (`claimVerified` checks doc ownership — circular if the
+      attacker created the doc). Claim a victim's fingerprint before their first sync → set your
+      own `chatPubKey` → senders encrypt relay messages to you, and the mailbox read/delete rule
+      for that fingerprint also passes. Window = users who haven't synced a profile yet.
+      Fix: challenge-response proving control of the mesh identity key, validated by a Cloud
+      Function that is the sole writer binding fingerprint→uid. Cheap mitigation: client prefers
+      the chatPubKey seen over the BLE Noise session to the Firestore copy.
+- [ ] **G7 Enable App Check enforcement** (Firestore first, then Auth) once testers are on vc69+
+      and Verified requests are ~90%+. Deliberately NOT enabled 2026-08-24: unknown-origin and
+      invalid requests were both 0/5.7K, so there was nothing to block, and enforcing at 2%
+      verified would have cut off every pre-vc69 client including our own test devices.
+
+## Issue #31 — vc66/vc67 shipped a total discovery outage (2026-08-23 03:15–03:40)
+
+Symptom: "both phones are not able to discover each other anymore", surviving a charge and multiple restarts. Not a battery/power-saver fault (that hypothesis was wrong — max duty-cycle OFF window is 120 s; the Oppo had been silent for over an hour).
+
+Root cause: my own permission-reduction change. vc66 capped `ACCESS_FINE/COARSE_LOCATION` at `maxSdkVersion="30"` in the manifest, and vc67 fixed the two onboarding call sites — but `mesh/BluetoothPermissionManager.hasBluetoothPermissions()` still demanded both location permissions unconditionally. From API 31 up they can never be granted, so the check could never pass:
+
+    E BluetoothConnectionManager: Missing Bluetooth permissions
+    E BluetoothMeshService: Failed to start Bluetooth services
+
+Neither the scanner nor the advertiser ever started — the device went completely dark while the foreground service stayed green (`isForeground=true types=0x10`), which is what made it look like a peer problem rather than a self-inflicted one. **Every device on API 31+ (Android 12 and up) was dark — not one phone.** minSdk is 26, so API 26–30 devices could still be granted location and kept working; that is the only reason the Nokia, on a pre-vc66 build, stayed alive. (An earlier note in this session said minSdk was 32 and called it 100% of users. That came from the Play-delivered split reporting `minSdk=32` in `dumpsys` and was wrong — `gradle/libs.versions.toml` sets minSdk 26.)
+
+Diagnosis that actually found it: `dumpsys bluetooth_manager` → GATT Scanner Map showed `com.goapps.locus` at 347 scans started / 347 stopped with no ongoing scan and a last scan an hour stale, while `ps -o ETIME` showed the process was 13 min old — i.e. the current process had never scanned once. Logcat alone hid it (the error is one line at startup, drowned by OEM noise).
+
+Fixes: location permissions gated behind `SDK_INT <= R` in `BluetoothPermissionManager`; also dropped the now-undeclared `FOREGROUND_SERVICE_TYPE_LOCATION` branch from `MeshForegroundService.startForegroundCompat` (latent SecurityException from the same manifest change).
+
+Verified on Oppo (locally-signed release APK, R8 on): scan started/stopped cycling, advertising up, `Device connected`, `Verified announce from f423ca0c57ac6b63 (anon4764)` and `PeerManager: Updated peer` — full mutual discovery of the Nokia, screen locked, within seconds of launch.
+
+Lesson: when a permission is removed from the manifest, grep every `checkSelfPermission` call site, not just the onboarding flow. A permission gate that can never be satisfied fails silently and looks exactly like a hardware/peer fault.
+
+## App Check wired up (2026-08-23) — was registered but never actually enforced
+
+Triggered by an audit of the 79 Firebase Auth identities (only ~13 have profiles; ~60 Google accounts signed in and never created one).
+
+Findings:
+- **The public repo leaks nothing.** `google-services.json` was never committed (gitignored, and absent from all history); no `AIza…` key appears in any tracked file. The API key is still extractable from any APK, which is inherent to Firebase on Android — that is what App Check is for.
+- `com.goapps.locus` was **already registered** in Firebase App Check with Play Integrity, but the app **never depended on the App Check SDK**, so it never sent a token. Console showed Cloud Firestore and Authentication at **0% verified / 100% unverified, status Monitoring** — registration with nothing behind it.
+
+Change: `firebase-appcheck-playintegrity` (release) + `firebase-appcheck-debug` (debug only), installed first thing in `BitchatApplication.onCreate()` before anything touches Auth/Firestore/Functions. The provider is picked by **build-type source set** (`src/release/…/AppCheckInstaller.kt`, `src/debug/…/AppCheckInstaller.kt`) rather than a `BuildConfig.DEBUG` branch — the debug factory is not on the release classpath, and a reflective lookup is the exact trap that stripped the Google sign-in button under R8 earlier. Lockfiles + `verification-metadata.xml` regenerated (`--write-locks --write-verification-metadata sha256`); release and debug both build.
+
+**DO NOT turn on enforcement yet.** vc68 is live to internal testers with no App Check SDK, so enforcing would lock out every existing install instantly. Correct order: ship a build containing this change → watch "Verified requests" climb toward 100% in Firebase Console > App Check > APIs → only then flip Firestore and Authentication from Monitoring to Enforced. Debug builds print a token under logcat tag `DebugAppCheckProvider` that must be added under App Check > Apps > Manage debug tokens once enforcement is on.
+
+Still unexplained: the ~60 Google-provider sign-ins with no profile, created Aug 22–23. Ruled out — Play pre-launch report (never generated for this app), internal-track testers (list is empty), and the other two packages in the project (`com.bitconnect.app`, `com.locus.app`, neither distributed). A paid tester service would fit the pattern exactly; awaiting confirmation from the user.
+
+## Issue #32 — a 1:1 message could be broadcast to the public Room (2026-08-24)
+
+Reported: "two people connect and click on chat, they end up in room and message shows up in room".
+
+Confirmed on-device (Oppo, Play build vc69): the chat with `anon3726` renders messages with public
+mention formatting — `@anon3726 hi` 17:44, `@anon3726 fgs testing` 17:55, `testing 2` 17:56 — i.e.
+text typed into a 1:1 went out as a Room broadcast. Those timestamps are the FGS video session.
+
+Root cause (code-proven): `ChatViewModel.sendMessage` picks its route from
+`state.getSelectedPrivateChatPeerValue()`, and **falls through to the public/channel branch when it
+is null**. Opening a chat calls `openChat` → `showPrivateChatSheet(peerID)`, which sets ONLY
+`_privateChatSheetPeer`. The peer that actually routes the send is set by
+`PrivateChatManager.startPrivateChat`, which the sheet invokes from
+`LaunchedEffect(peerID) { viewModel.startPrivateChat(peerID) }` — and the ViewModel wrapper sets it
+only at the END of a `withContext(Dispatchers.IO)` block that first loads conversation history from
+disk. The composer is live before that lands, so a send in that window routes PUBLIC. Worst case is
+a brand-new pair with no history to load — exactly "when two people connect".
+
+Not a tab bug: `ConnectTab.CHAT` is labelled "Room" and hosting the 1:1 there is deliberate
+("The Room is the venue-wide noticeboard; when a 1:1 chat is open, the inherited ChatScreen hosts
+that private conversation instead"), so landing on that tab is by design. The leak is the routing
+fallback, not the navigation.
+
+Fix applied (uncommitted): in `sendMessage`, `selectedPeer` now falls back to
+`state.getPrivateChatSheetPeerValue()` — if the 1:1 sheet is open the send is private, full stop.
+`sendPrivateMessageDurably` re-checks `isPeerBlocked`, so this cannot bypass a block. Debug build
+compiles clean.
+
+NOT YET VERIFIED ON-DEVICE: confirming the fix means replacing the Play-signed vc69 on the Oppo,
+which requires an uninstall (wipes identity + this conversation). Left for the user to authorise.
+
+## vc70 (0.32.4) — Room/1:1 separation, celebration, ads (2026-08-24)
+
+**#33 Room and 1:1 were the same place.** `ConnectTab.CHAT` is labelled "Room", and its branch read
+`if (privateChatPeer != null) ChatScreen(...) else RoomScreen(...)` — so opening any 1:1 jumped to
+the Room tab, which then rendered the private chat. Nav lit up ROOM, and the Room was unreachable
+for as long as a chat was open. Fixed: the Room tab only ever renders RoomScreen; the 1:1 now lives
+in the CONNECTIONS ("Chats") branch, and both navigations that forced the Room tab (`openChat`, and
+the LaunchedEffect on `privateChatPeer`) go to Chats. **VERIFIED on-device**: opening a chat with
+`anon1747` leaves CHATS highlighted; Room shows the Room. NOTE: this was pre-existing (last touched
+in `49875cc`, vc65), not introduced this session.
+
+**#34 Match celebration only ever fired for the initiator.** It was inferred by diffing
+`matches.keys` against a baseline in `remember`, and the first diff is deliberately swallowed to
+seed that baseline — so whoever recomposed fresh at that instant (the person tapping Connect back,
+whose tap closes a sheet) had their match counted as baseline and never celebrated. Replaced with
+an explicit `ConnectManager.newMatch` SharedFlow (no replay — a celebration is a live moment),
+emitted from `registerMatch`, which BOTH sides reach: line ~465 when an incoming like completes our
+own, line ~573 when our like completes theirs. Also emitted from `connectViaQr`.
+
+**Copy:** Room header's TONIGHT chip removed (per user) — that was TonightScreen's only entry point,
+so that screen is now unreachable dead UI, left in tree for easy restore. Connect states shortened
+and de-em-dashed: "✓ Sent" / "✓ Waiting on them".
+
+**#35 OPEN — the room code cannot render on any supported device.** `RoomCode.current()` derives the
+code from `LocationManager.getLastKnownLocation`, which needs ACCESS_FINE/COARSE_LOCATION — capped at
+`maxSdkVersion="30"` since vc66. On Android 12+ the call is denied, `current()` returns null and the
+chip never appears. Dead since vc66 (same root cause as the discovery outage, silent until now).
+User decision 2026-08-24: **defer**. Options when revisited: re-add ACCESS_COARSE_LOCATION for all
+API levels (coords never leave the device — they're hashed into 4 chars; costs a Play permission
+declaration + Data Safety revisit), derive the code from the mesh instead, or drop the feature.
+
+## vc71 work batch (2026-08-27) — reports, analytics, funnel, badge, key pinning
+
+**#36 Report reasons were decorative.** `ReportReasonChips` kept its selection in a local
+`remember` nothing read; `CloudSync.report` had no reason parameter — every report reached
+Firestore reasonless while goapps.store/locus-child-safety.html promised the reason is included.
+Fixed: state lifted to `SafetyDialog`, `onBlockReport(reason)` → `blockAndReport(..., reason)` →
+`report(..., reason)`, stored as `reason` ("unspecified" when none picked — the in-chat
+block/report path has no chips and stays that way).
+
+**Analytics finally integrated** (was: 104 sign-ins / 24 profiles with zero visibility into the
+gap). `firebase-analytics` via BOM; `connect/Metrics.kt` defines the entire event surface —
+`identity_done`, `profile_saved` (first save only), `match_made`, `chat_opened`. No content, no
+peer IDs, no location in events. Initialized first in Application.onCreate. NOTE: Data Safety form
+must be revisited before this ships to Play (App activity + Device/other IDs), and the onboarding
+card still says "Nothing is tracked or collected".
+
+**#37 Seen-match badge.** A fresh match with no messages badged nothing anywhere — dismissing the
+celebration left no trail. `ConnectStore.unseenMatches` (persisted) + `ConnectManager.unseenMatches`;
+registerMatch/connectViaQr add, block/wipe remove, `markMatchesSeen()` clears. CHATS tab badge is
+now unread + unseen; MatchesScreen snapshots the set on arrival (pills survive the visit, badge
+clears), shows a copper NEW MATCH pill, sorts new matches with unread. Celebration dismiss line
+"They're in Chats whenever you're ready." from the earlier batch complements this.
+
+**#25 fingerprint-squat mitigation (client half).** The card broadcast now carries the owner's
+relay key (`pk`, b64 X25519) — ~50 bytes, budget fine. On hearing a card, the key is pinned to the
+sender's Noise fingerprint (`ChatRelay.pinPeerKey`, persisted in `relay_pinned_keys` prefs) and the
+relay ALWAYS prefers a pinned key over the Firestore copy. Effect: for anyone actually met over
+BLE — the only way to match — a squatted profiles/{fp} doc no longer captures their messages.
+Residual: first relay contact with a never-met fingerprint still trusts Firestore; the server-side
+challenge binding fingerprint→uid (G6) remains the complete fix before scale.
+
+Also from this batch's predecessors (uncommitted): wipe now signs out AFTER the cloud delete lands
+(no more "You're logged in — your chats are saved" straight after deleting everything).
+
+**ALL COMPILED, NOT DEVICE-VERIFIED** — Oppo off adb at build time. versionCode bumped to
+71 (0.32.5) for the next Play release; vc70 remains what testers run.
+
+## Privacy copy corrected for the analytics reality (2026-08-27)
+
+Analytics made "Nothing is tracked or collected" false, and the relay had already made
+"NO SERVER" false. Both replaced with the two claims that still hold — offline-first and E2E:
+
+| Where | Was | Now |
+|---|---|---|
+| Onboarding card title | Your Privacy is Protected | Offline first, end to end encrypted |
+| Onboarding bullets | • Nothing is tracked or collected · • Chats work with no internet | • Chats work with no internet · • Only you and them can read them |
+| Splash tagline | NO ACCOUNT · NO SERVER | OFFLINE FIRST · END TO END ENCRYPTED |
+| About | No Tracking / "No servers, accounts, or data collection." | Private by Design / "No account needed, and your location is never recorded or shared." |
+| About offline | "...no internet and no servers." | "...no internet at all." |
+
+"Location is never recorded or shared" is still true and still worth saying — it survives
+analytics. AgeGateScreen's tagline updated too, though that screen is unreachable dead UI.
+Splash verified on-device. The store listing full description was already written without the
+false absolutes; PLAY_LISTING.md needs no change.

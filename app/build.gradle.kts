@@ -32,8 +32,8 @@ android {
         applicationId = "com.goapps.locus"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 67
-        versionName = "0.32.1"
+        versionCode = 75
+        versionName = "1.0.1"
         buildConfigField(
             "String",
             "GITHUB_RELEASE_CERT_SHA256",
@@ -225,6 +225,14 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.functions)
     implementation(libs.firebase.messaging)
+    // App Check: attests that Firebase traffic comes from a genuine, unmodified Locus install.
+    // The API key ships inside every APK, so without this anyone can talk to Firestore/Auth
+    // directly. Play Integrity for real builds, debug provider for local ones.
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
+    // Analytics: the profile funnel was invisible without it (104 sign-ins, 24 profiles, no way
+    // to see where the other 80 stopped). Event names live in connect/Metrics.kt.
+    implementation(libs.firebase.analytics)
     implementation(libs.kotlinx.coroutines.play.services)
 
     // Security preferences

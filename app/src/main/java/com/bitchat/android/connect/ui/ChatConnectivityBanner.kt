@@ -104,7 +104,7 @@ internal fun ChatConnectivityBanner() {
     val body = when {
         hardBlock -> "Bluetooth is off and you're not signed in. Turn Bluetooth on, or sign in to keep chatting online."
         !keepChats -> "You're talking over Bluetooth. Sign in so it continues online when you go out of range."
-        else -> "You're signed in — messages will send online when there's a connection."
+        else -> "You're signed in. Messages send when you're online."
     }
 
     Column(

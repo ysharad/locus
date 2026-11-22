@@ -83,7 +83,9 @@ fun LocusSplash(onDone: () -> Unit) {
             )
         }
         Text(
-            "NO ACCOUNT · NO SERVER",
+            // "NO SERVER" stopped being true when the relay landed, and analytics made
+            // "nothing tracked" wrong too. These two claims are the ones that still hold.
+            "OFFLINE FIRST · END TO END ENCRYPTED",
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp).alpha(((p - 0.85f) / 0.15f).coerceIn(0f, 1f)),
             style = EyebrowStyle.copy(fontSize = 10.sp),
             color = Slate

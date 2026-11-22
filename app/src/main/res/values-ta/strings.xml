@@ -3,7 +3,7 @@
 <resources>
         <string name="skip">Skip</string>
     <string name="bluetooth_recommended">Bluetooth Recommended</string>
-    <string name="mesh_service_notification_content">மெஷ் இயங்குகிறது — %1$d பியர்ஸ்</string>
+    <string name="mesh_service_notification_content">மெஷ் இயங்குகிறது, %1$d பியர்ஸ்</string>
 
   <string name="verify_title">சரிபார்</string>
   <string name="verify_my_qr_title">என்னை சரிபார்க்க ஸ்கேன் செய்யவும்</string>

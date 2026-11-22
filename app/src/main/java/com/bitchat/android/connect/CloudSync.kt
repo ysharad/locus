@@ -15,9 +15,8 @@ import com.google.firebase.firestore.SetOptions
  * Identity model (no login): the mesh keypair IS the account. The full identity
  * fingerprint (SHA-256 of the Noise static public key) is the document ID. On first
  * contact we sign in with Firebase Anonymous Auth and stamp that uid into the profile
- * doc; security rules then let only that uid touch the doc. This binds fingerprint→uid
- * on first-write. (Upgrade path: replace anonymous auth with a Cloud Function that
- * verifies a signature challenge and mints a custom token for the fingerprint.)
+ * doc; security rules then let only that uid touch the doc. [IdentityClaim] proves we hold
+ * the identity key, so the server hands us the doc even if another account wrote it first.
  *
  * Every call is fire-and-forget and swallows failures: no cloud outage, missing
  * config, or airplane mode may ever affect the offline experience.
@@ -28,8 +27,10 @@ object CloudSync {
 
     @Volatile private var available = false
     @Volatile private var fingerprint: String? = null
+    @Volatile private var appContext: Context? = null
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         available = try {
             FirebaseApp.initializeApp(context) != null || FirebaseApp.getApps(context).isNotEmpty()
         } catch (e: Exception) {
@@ -42,12 +43,12 @@ object CloudSync {
     fun bind(identityFingerprint: String) {
         if (identityFingerprint.isBlank()) return
         fingerprint = identityFingerprint
-        signedIn { /* warm the session so later writes are instant */ }
+        whenClaimed { /* claim early, so nobody else can hold the profile */ }
     }
 
     fun syncProfile(profile: ConnectProfile) {
         val fp = fingerprint ?: return
-        signedIn { uid ->
+        whenClaimed { uid ->
             // "Last seen" off → stop refreshing the timestamp and remove any existing one.
             val lastSeen = if (ConnectManager.lastSeenEnabled()) FieldValue.serverTimestamp() else FieldValue.delete()
             val doc = mapOf(
@@ -76,7 +77,7 @@ object CloudSync {
     fun heartbeat() {
         val fp = fingerprint ?: return
         if (!ConnectManager.lastSeenEnabled()) return // last-seen off → no liveness stamp
-        signedIn { uid ->
+        whenClaimed { uid ->
             FirebaseFirestore.getInstance()
                 .collection("profiles").document(fp)
                 .set(
@@ -88,7 +89,7 @@ object CloudSync {
     }
 
     /** File an abuse report for review. Create-only server-side; nobody can read them back. */
-    fun report(reportedPeerID: String, reportedProfile: ConnectProfile?) {
+    fun report(reportedPeerID: String, reportedProfile: ConnectProfile?, reason: String? = null) {
         val fp = fingerprint
         signedIn { uid ->
             val doc = mapOf(
@@ -97,6 +98,9 @@ object CloudSync {
                 "reportedPeerID" to reportedPeerID,
                 "reportedName" to (reportedProfile?.name ?: ""),
                 "reportedCard" to (reportedProfile?.toJson() ?: ""),
+                // "under 18" is the report type with legal weight — the published child-safety
+                // standards promise the reason reaches us, so it must actually be stored.
+                "reason" to (reason ?: "unspecified"),
                 "createdAt" to FieldValue.serverTimestamp()
             )
             FirebaseFirestore.getInstance()
@@ -145,12 +149,37 @@ object CloudSync {
         }
     }
 
-    /** Best-effort delete of the cloud profile (card, published key, push token). */
-    fun deleteProfile(fingerprint: String?) {
-        val fp = fingerprint ?: this.fingerprint ?: return
-        signedIn {
-            FirebaseFirestore.getInstance().collection("profiles").document(fp).delete()
-                .addOnFailureListener { Log.i(TAG, "profile delete failed: ${it.message}") }
+    /** Run [block] once the identity claim has finished, successfully or not. */
+    fun whenClaimed(block: (uid: String) -> Unit) {
+        signedIn { uid ->
+            val context = appContext
+            val fp = fingerprint
+            if (context == null || fp == null) block(uid)
+            else IdentityClaim.ensure(context, uid, fp) { block(uid) }
+        }
+    }
+
+    /**
+     * Delete the account and everything filed under it: profiles, push tokens, queued mail.
+     * [onDone] gets true only if the server confirmed, or if there was never an account.
+     */
+    fun deleteAccount(onDone: (Boolean) -> Unit) {
+        if (!available) return onDone(true)
+        try {
+            if (FirebaseAuth.getInstance().currentUser == null) return onDone(true)
+            whenClaimed {
+                com.google.firebase.functions.FirebaseFunctions.getInstance()
+                    .getHttpsCallable("deleteMyData")
+                    .withTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                    .call()
+                    .addOnCompleteListener {
+                        if (!it.isSuccessful) Log.i(TAG, "account delete failed: ${it.exception?.message}")
+                        onDone(it.isSuccessful)
+                    }
+            }
+        } catch (e: Exception) {
+            Log.i(TAG, "account delete unavailable: ${e.message}")
+            onDone(false)
         }
     }
 

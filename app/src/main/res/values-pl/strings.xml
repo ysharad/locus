@@ -18,7 +18,7 @@
   <string name="location_notes_input_placeholder">dodaj notatkę dla tego miejsca</string>
     <string name="skip">Pomiń</string>
     <string name="bluetooth_recommended">Bluetooth zalecany</string>
-    <string name="mesh_service_notification_content">Mesh działa — %1$d peerów</string>
+    <string name="mesh_service_notification_content">Mesh działa, %1$d peerów</string>
 
   <string name="verify_title">weryfikuj</string>
   <string name="verify_my_qr_title">zeskanuj, aby mnie zweryfikować</string>

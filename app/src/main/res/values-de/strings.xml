@@ -349,7 +349,7 @@
   <string name="dismiss">schließen</string>
   <string name="location_notes_input_placeholder">füge eine Notiz zu diesem Ort hinzu</string>
     <string name="bluetooth_recommended">Bluetooth empfohlen</string>
-    <string name="mesh_service_notification_content">Mesh läuft — %1$d Peers</string>
+    <string name="mesh_service_notification_content">Mesh läuft, %1$d Peers</string>
 
   <string name="verify_title">verifizieren</string>
   <string name="verify_my_qr_title">scannen zur verifizierung</string>
@@ -388,8 +388,8 @@
   <string name="verify_success_system_message">verifiziert %1$s</string>
     <string name="cd_open_about">Info öffnen</string>
   <string name="nearby_notes_reveal">nachsehen, ob hier notizen hinterlassen wurden</string>
-  <string name="nearby_notes_one">1 notiz hier hinterlassen — tippen zum lesen</string>
-  <string name="nearby_notes_many">%d notizen hier hinterlassen — tippen zum lesen</string>
+  <string name="nearby_notes_one">1 notiz hier hinterlassen, tippen zum lesen</string>
+  <string name="nearby_notes_many">%d notizen hier hinterlassen, tippen zum lesen</string>
     <string name="about_language">Sprache</string>
     <string name="about_app_language">App-Sprache</string>
     <string name="about_system_default">Systemstandard</string>

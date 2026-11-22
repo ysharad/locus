@@ -335,7 +335,7 @@
     </plurals>
 
     <string name="bluetooth_recommended">Khuyên dùng Bluetooth</string>
-    <string name="mesh_service_notification_content">Mesh đang chạy — %1$d ngang hàng</string>
+    <string name="mesh_service_notification_content">Mesh đang chạy, %1$d ngang hàng</string>
 
   <string name="verify_title">verify</string>
   <string name="verify_my_qr_title">scan to verify me</string>
@@ -374,8 +374,8 @@
   <string name="verify_success_system_message">verified %1$s</string>
     <string name="cd_open_about">Mở phần Giới thiệu</string>
   <string name="nearby_notes_reveal">kiểm tra ghi chú để lại ở đây</string>
-  <string name="nearby_notes_one">có 1 ghi chú để lại ở đây — chạm để đọc</string>
-  <string name="nearby_notes_many">có %d ghi chú để lại ở đây — chạm để đọc</string>
+  <string name="nearby_notes_one">có 1 ghi chú để lại ở đây, chạm để đọc</string>
+  <string name="nearby_notes_many">có %d ghi chú để lại ở đây, chạm để đọc</string>
     <string name="about_language">Ngôn ngữ</string>
     <string name="about_app_language">Ngôn ngữ ứng dụng</string>
     <string name="about_system_default">Mặc định hệ thống</string>

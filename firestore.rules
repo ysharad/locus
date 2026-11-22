@@ -6,7 +6,12 @@ service cloud.firestore {
     match /profiles/{fingerprint} {
       // Signed-in reads only (anonymous auth counts). Discovery is mesh-only; the sender needs a
       // profile read to fetch a recipient's chatPubKey. The push token is NOT here (see /tokens).
-      allow read: if request.auth != null;
+      // `get` — one doc, by a fingerprint already learned over BLE — is all the client ever does.
+      // `list` is denied: a bare `allow read` also grants collection queries, which would let any
+      // signed-in account (anonymous included) enumerate and scrape every user's name, age, bio,
+      // interests and last-seen in one pass.
+      allow get: if request.auth != null;
+      allow list: if false;
       // `verified` is server-truth: only the claimVerified Cloud Function (admin SDK,
       // bypasses rules) may ever write it. Any client write touching it is rejected.
       allow create: if request.auth != null
@@ -58,7 +63,9 @@ service cloud.firestore {
     // Venue room codes: a short shareable code -> channel. Readable by anyone signed in so a code
     // can be resolved to its room; created once by its first owner.
     match /rooms/{code} {
-      allow read: if request.auth != null;
+      // Same get/list split as profiles: a code is resolved one at a time, never enumerated.
+      allow get: if request.auth != null;
+      allow list: if false;
       allow create: if request.auth != null
                     && request.resource.data.ownerUid == request.auth.uid;
       allow update, delete: if request.auth != null

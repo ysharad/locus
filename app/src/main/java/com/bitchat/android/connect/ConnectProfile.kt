@@ -25,7 +25,14 @@ data class ConnectProfile(
     val createdAt: Long = 0L,
     // Signed-in-with-Google verification. Peers see this as a claim over mesh; the
     // authoritative copy lives in Firestore and is only ever written server-side.
-    val verified: Boolean = false
+    val verified: Boolean = false,
+    /**
+     * The owner's relay public key (b64 X25519), carried over the mesh so a peer you have
+     * actually met can seal relay messages to the key you announced in person — not to whatever
+     * key sits in the Firestore profile doc, which anyone could have claimed before you first
+     * synced (fingerprint squatting). Empty when unknown.
+     */
+    val chatPubKey: String = ""
 ) {
     /** The owner's chosen glyph tint, or null to use the theme default. */
     fun glyphTintOrNull(): androidx.compose.ui.graphics.Color? =
@@ -47,6 +54,7 @@ data class ConnectProfile(
         if (createdAt > 0L) o.put("c", createdAt)
         if (verified) o.put("vf", 1)
         if (glyphColor != 0) o.put("gc", glyphColor)
+        if (chatPubKey.isNotBlank()) o.put("pk", chatPubKey.take(64))
         return o.toString()
     }
 
@@ -74,7 +82,8 @@ data class ConnectProfile(
                 updatedAt = receivedAt,
                 createdAt = o.optLong("c", 0L),
                 verified = o.optInt("vf", 0) == 1,
-                glyphColor = o.optInt("gc", 0)
+                glyphColor = o.optInt("gc", 0),
+                chatPubKey = o.optString("pk").take(64)
             )
         } catch (_: Exception) {
             null

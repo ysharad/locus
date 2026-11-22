@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.bitchat.android.connect.ConnectManager
 import com.bitchat.android.ui.RewardedAds
+import kotlinx.coroutines.delay
 
 /**
  * Locus+ — the perks hub. Locus never sells anything; the only way in is a few seconds of a
@@ -51,7 +53,20 @@ fun LocusPlusScreen(onClose: () -> Unit, onWhoLiked: () -> Unit = {}) {
     val visible by ConnectManager.visible.collectAsState()
     val now = System.currentTimeMillis()
     val hiddenCount = (likesReceived - revealedLikes).size
-    val boosted = now < boostUntil
+
+    // Tick every second while a boost runs. Without this the window is evaluated once at
+    // composition, so the chip would sit frozen at whatever it read when the screen opened.
+    var boostLeftMs by remember(boostUntil) {
+        mutableStateOf((boostUntil - System.currentTimeMillis()).coerceAtLeast(0L))
+    }
+    LaunchedEffect(boostUntil) {
+        while (boostUntil - System.currentTimeMillis() > 0) {
+            boostLeftMs = boostUntil - System.currentTimeMillis()
+            delay(1_000)
+        }
+        boostLeftMs = 0L
+    }
+    val boosted = boostLeftMs > 0
 
     var watching by remember { mutableStateOf(false) }
     var boostHint by remember { mutableStateOf<String?>(null) }
@@ -64,8 +79,9 @@ fun LocusPlusScreen(onClose: () -> Unit, onWhoLiked: () -> Unit = {}) {
         watching = true
         RewardedAds.show(
             act,
+            placement = com.bitchat.android.ui.RewardedPlacement.BOOST,
             onReward = { watching = false; onReward() },
-            onUnavailable = { watching = false; boostHint = "No video ready — try again in a moment." }
+            onUnavailable = { watching = false; boostHint = "No video ready. Try again in a moment." }
         )
     }
 
@@ -91,7 +107,7 @@ fun LocusPlusScreen(onClose: () -> Unit, onWhoLiked: () -> Unit = {}) {
             Text("Locus+", style = TitleStyle.copy(fontSize = 28.sp), color = MaterialTheme.colorScheme.onBackground)
         }
         Text(
-            "Everything in Locus is free. Perks run on attention, not payments — watch a short video, unlock something useful.",
+            "Everything in Locus is free. Perks run on attention, not payments. Watch a short video, unlock something useful.",
             style = BodyStyle.copy(fontSize = 14.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -102,11 +118,11 @@ fun LocusPlusScreen(onClose: () -> Unit, onWhoLiked: () -> Unit = {}) {
         PerkCard(
             glyph = "+",
             title = "See who likes you",
-            body = "One video reveals everyone who swiped you first — forever. New admirers arrive hidden.",
+            body = "One video reveals everyone who swiped you first, forever. New admirers arrive hidden.",
             statusText = when {
                 hiddenCount > 0 -> "$hiddenCount HIDDEN RIGHT NOW"
                 likesReceived.isNotEmpty() -> "ALL REVEALED"
-                else -> "NO ONE YET — STAY DISCOVERABLE"
+                else -> "NO ONE YET · STAY DISCOVERABLE"
             },
             statusColor = if (hiddenCount > 0) Copper else Jade,
             buttonLabel = "See who ⚡",
@@ -119,12 +135,18 @@ fun LocusPlusScreen(onClose: () -> Unit, onWhoLiked: () -> Unit = {}) {
         PerkCard(
             glyph = "◎",
             title = "Boost",
-            body = "Put your profile back on the air so nearby decks resort you to the front, right now.",
+            body = "Re-airs your card right now, so decks near you sort you to the front. " +
+                "You stay marked as boosted for 30 minutes.",
             statusText = when {
-                boosted -> "BOOSTED · AT THE FRONT"
-                !visible -> "YOU'RE INVISIBLE — TURN ON VISIBLE FIRST"
+                boosted -> "BOOSTED · ${formatBoostLeft(boostLeftMs)} LEFT"
+                !visible -> "YOU'RE INVISIBLE · TURN ON VISIBLE FIRST"
                 else -> null
             },
+            // The effect happens on other people's phones, so say so plainly — otherwise a boost
+            // looks like nothing happened on the only screen the booster can see.
+            statusDetail = if (boosted) {
+                "Anyone who opens Discover near you sees your card at the top."
+            } else null,
             statusColor = if (boosted) Jade else Rust,
             buttonLabel = if (boosted) "Watch to boost again" else "Watch & boost",
             watching = watching,
@@ -179,6 +201,12 @@ fun LocusPlusScreen(onClose: () -> Unit, onWhoLiked: () -> Unit = {}) {
     }
 }
 
+/** Boost window as m:ss, rounding up so it never shows 0:00 while the boost is still live. */
+private fun formatBoostLeft(ms: Long): String {
+    val totalSeconds = ((ms + 999) / 1000).coerceAtLeast(0)
+    return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+}
+
 @Composable
 private fun PerkCard(
     glyph: String,
@@ -186,6 +214,7 @@ private fun PerkCard(
     body: String,
     statusText: String?,
     statusColor: androidx.compose.ui.graphics.Color,
+    statusDetail: String? = null,
     buttonLabel: String,
     watching: Boolean,
     onWatch: () -> Unit
@@ -208,6 +237,10 @@ private fun PerkCard(
         if (statusText != null) {
             Spacer(Modifier.height(12.dp))
             Text(statusText, style = EyebrowStyle.copy(fontSize = 11.sp, letterSpacing = 0.1.em), color = statusColor)
+        }
+        if (statusDetail != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(statusDetail, style = BodyStyle.copy(fontSize = 13.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(16.dp))
         Box(

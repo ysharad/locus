@@ -335,7 +335,7 @@
   <string name="dismiss">закрыть</string>
   <string name="location_notes_input_placeholder">добавьте заметку для этого места</string>
     <string name="bluetooth_recommended">Рекомендуется Bluetooth</string>
-    <string name="mesh_service_notification_content">Mesh запущен — %1$d пиров</string>
+    <string name="mesh_service_notification_content">Mesh запущен, %1$d пиров</string>
 
   <string name="verify_title">проверить</string>
   <string name="verify_my_qr_title">сканируй для проверки</string>
@@ -374,8 +374,8 @@
   <string name="verify_success_system_message">проверен %1$s</string>
     <string name="cd_open_about">Открыть раздел «О приложении»</string>
   <string name="nearby_notes_reveal">проверить, есть ли здесь заметки</string>
-  <string name="nearby_notes_one">здесь оставлена 1 заметка — нажмите, чтобы прочитать</string>
-  <string name="nearby_notes_many">здесь оставлено заметок: %d — нажмите, чтобы прочитать</string>
+  <string name="nearby_notes_one">здесь оставлена 1 заметка, нажмите, чтобы прочитать</string>
+  <string name="nearby_notes_many">здесь оставлено заметок: %d, нажмите, чтобы прочитать</string>
     <string name="about_language">Язык</string>
     <string name="about_app_language">Язык приложения</string>
     <string name="about_system_default">Системный язык</string>

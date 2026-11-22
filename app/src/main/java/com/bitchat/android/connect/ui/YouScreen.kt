@@ -99,7 +99,7 @@ fun YouScreen(myPeerID: String, onEdit: () -> Unit, onInvite: () -> Unit, onKeep
                 Text("Visible in the room", style = BodyStyle.copy(fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    if (visible) "Go quiet without leaving" else "Hidden — you're off the radar",
+                    if (visible) "Go quiet without leaving" else "Hidden, you're off the radar",
                     style = BodyStyle.copy(fontSize = 13.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -117,7 +117,7 @@ fun YouScreen(myPeerID: String, onEdit: () -> Unit, onInvite: () -> Unit, onKeep
             Column(Modifier.weight(1f)) {
                 Text("Locus+", style = BodyStyle.copy(fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(3.dp))
-                Text("Free perks — watch, unlock", style = BodyStyle.copy(fontSize = 13.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Free perks, watch to unlock", style = BodyStyle.copy(fontSize = 13.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text("→", style = BodyStyle.copy(fontSize = 16.sp), color = Copper)
         }
@@ -139,7 +139,7 @@ fun YouScreen(myPeerID: String, onEdit: () -> Unit, onInvite: () -> Unit, onKeep
                 Text("Keep your chats", style = BodyStyle.copy(fontSize = 16.sp), color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    if (keepChats) "On — backed up, encrypted" else "Off — chats stay on this phone",
+                    if (keepChats) "On, backed up and encrypted" else "Off, chats stay on this phone",
                     style = BodyStyle.copy(fontSize = 13.sp),
                     color = if (keepChats) Jade else MaterialTheme.colorScheme.onSurfaceVariant
                 )

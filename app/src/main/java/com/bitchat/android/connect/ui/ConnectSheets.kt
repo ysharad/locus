@@ -143,14 +143,14 @@ internal fun TraySheet(
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text(
-                    if (revealing) "Loading…" else "Reveal — watch a short video",
+                    if (revealing) "Loading…" else "Reveal with a short video",
                     style = EyebrowStyle.copy(fontSize = 13.sp, letterSpacing = 0.1.em),
                     color = OnCopper
                 )
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "One video reveals everyone here — forever. New admirers arrive hidden.",
+                "One video reveals everyone here, forever. New admirers arrive hidden.",
                 style = BodyStyle.copy(fontSize = 12.sp),
                 color = Slate
             )
@@ -174,7 +174,7 @@ internal fun RevealGateSheet(count: Int, watching: Boolean, onWatch: () -> Unit,
         Text("See who's into you", style = TitleStyle.copy(fontSize = 24.sp), color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Watch a short video and everyone who swiped you first is revealed — unlocked for the next 24 hours.",
+            "Watch a short video to reveal everyone who swiped you first. Unlocked for 24 hours.",
             style = BodyStyle.copy(fontSize = 14.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -287,8 +287,8 @@ internal fun PeerSheet(
                 Text(
                     when {
                         isConnection -> "✶  Chat"
-                        sentState.value && !justSent.value -> "✓  Sent — waiting on them"
-                        sentState.value -> "✓  Sent — if they tap ⚡ too, it's a match"
+                        sentState.value && !justSent.value -> "✓  Waiting on them"
+                        sentState.value -> "✓  Sent"
                         // Deliberately NOT hinting that this person already liked you: that is
                         // exactly what the ⚡ tray sells. The match simply happens when you tap.
                         else -> "⚡  Connect"

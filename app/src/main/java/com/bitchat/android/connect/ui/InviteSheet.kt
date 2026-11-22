@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 
 private const val STORE_URL = "https://play.google.com/store/apps/details?id=com.goapps.locus"
 private const val INVITE_TEXT =
-    "I'm on Locus — discover and meet people around you, even with zero internet. Get it: $STORE_URL"
+    "I'm on Locus. Meet people around you, even with no internet. Get it: $STORE_URL"
 
 /**
  * Growth surface: every venue is empty until people in it have the app. The offline "beam" is the
@@ -73,7 +73,7 @@ fun InviteSheet(onBeam: () -> Unit, onDismiss: () -> Unit) {
                 onClick = {
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "We're on Locus — room $roomCode. Get it: https://play.google.com/store/apps/details?id=com.goapps.locus")
+                        putExtra(Intent.EXTRA_TEXT, "We're on Locus, room $roomCode. Get it: https://play.google.com/store/apps/details?id=com.goapps.locus")
                     }
                     context.startActivity(Intent.createChooser(send, "Share room code"))
                     onDismiss()

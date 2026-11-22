@@ -36,6 +36,43 @@ object ChatRelay {
     private val recipientKeyCache = java.util.concurrent.ConcurrentHashMap<String, Pair<ByteArray, Long>>()
     @Volatile private var ownKeyPublished = false
 
+    // Keys learned first-hand over the mesh (the card announced in person), fingerprint -> b64.
+    // Persisted, and ALWAYS preferred over the Firestore copy: the profiles/{fp} doc can be
+    // claimed by anyone before its real owner first syncs (fingerprint squatting), but a key
+    // heard over an authenticated BLE session came from the person you actually met.
+    private const val PINNED_PREFS = "relay_pinned_keys"
+    private val pinnedKeys = java.util.concurrent.ConcurrentHashMap<String, ByteArray>()
+    @Volatile private var pinsLoaded = false
+
+    private fun loadPins(context: Context?) {
+        if (pinsLoaded) return
+        val ctx = context?.applicationContext ?: appContext ?: return
+        pinsLoaded = true
+        try {
+            ctx.getSharedPreferences(PINNED_PREFS, Context.MODE_PRIVATE).all.forEach { (fp, v) ->
+                (v as? String)?.let { b64 ->
+                    try { pinnedKeys[fp] = Base64.decode(b64, Base64.NO_WRAP) } catch (_: Exception) { }
+                }
+            }
+        } catch (_: Exception) { }
+    }
+
+    /** Pin [pubB64] as [fingerprint]'s relay key, learned over the mesh. Last announcement wins. */
+    fun pinPeerKey(context: Context?, fingerprint: String, pubB64: String) {
+        val ctx = context?.applicationContext ?: appContext ?: return
+        loadPins(ctx)
+        try {
+            val key = Base64.decode(pubB64, Base64.NO_WRAP)
+            if (key.size != 32) return
+            val prev = pinnedKeys.put(fingerprint, key)
+            if (prev == null || !prev.contentEquals(key)) {
+                ctx.getSharedPreferences(PINNED_PREFS, Context.MODE_PRIVATE)
+                    .edit().putString(fingerprint, pubB64).apply()
+                recipientKeyCache.remove(fingerprint)
+            }
+        } catch (_: Exception) { }
+    }
+
     private fun db() = FirebaseFirestore.getInstance()
 
     private fun ensureAuth(block: () -> Unit) {
@@ -75,8 +112,12 @@ object ChatRelay {
                     Log.i(TAG, "seal failed: ${e.message}")
                 }
             }
+            loadPins(ctx)
+            val pinned = pinnedKeys[recipientFingerprint]
             val cached = recipientKeyCache[recipientFingerprint]
-            if (cached != null && System.currentTimeMillis() - cached.second < KEY_CACHE_TTL_MS) {
+            if (pinned != null) {
+                sealAndWrite(pinned)
+            } else if (cached != null && System.currentTimeMillis() - cached.second < KEY_CACHE_TTL_MS) {
                 sealAndWrite(cached.first)
             } else {
                 db().collection("profiles").document(recipientFingerprint).get()
